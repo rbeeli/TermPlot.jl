@@ -79,6 +79,20 @@ end
     @test occursin("points", text)
 end
 
+@testitem "scatter and vertical reference lines render" setup = [TermPlotSetup] begin
+    fig = Figure(; width=84, height=18)
+    panel!(fig; title="Signals", xlabel="Date", ylabel="Score", x_date_format=dateformat"yyyy-mm-dd")
+    x = [Date(2024, 1, 1) + Day(i) for i in 0:5]
+    scatter!(fig, x, [0.1, 0.4, 0.2, 0.7, 0.5, 0.3]; label="Hits", color=:cyan, marker="diamond")
+    vline!(fig, Date(2024, 1, 4); label="Rebalance", color=:magenta)
+    hline!(fig, 0.0; label="Flat", color=:gray)
+    text = render(fig)
+    @test occursin("Signals", text)
+    @test occursin("◆ Hits", text)
+    @test occursin("[=] Rebalance", text)
+    @test occursin("[=] Flat", text)
+end
+
 @testitem "dual axis render" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel!(fig; title="Dual", xlabel="Date", ylabel="Left", ylabel_right="Right", x_date_format=dateformat"yyyy-mm-dd")

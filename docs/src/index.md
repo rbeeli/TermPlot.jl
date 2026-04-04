@@ -45,7 +45,9 @@ display(fig)
 
 The documentation includes an organized examples section with separate pages for:
 
-- basic line plots
+- line charts
+- scatter plots
+- reference lines
 - dual-axis plots
 - stacked bars
 - linked layouts

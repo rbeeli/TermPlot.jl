@@ -1,6 +1,6 @@
-# Basic Line Plots
+# Line Charts
 
-Basic line plots are the default starting point for `TermPlot.jl`.
+Line charts are the default starting point for `TermPlot.jl`.
 
 The chart below is generated during the docs build.
 
