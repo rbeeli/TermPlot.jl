@@ -7,6 +7,8 @@ const FRAME_VERTICAL = '│'
 const FRAME_LEFT_TICK = '├'
 const FRAME_RIGHT_TICK = '┤'
 const FRAME_BOTTOM_TICK = '┬'
+const ANSI_BOLD = "\e[1m"
+const ANSI_UNBOLD = "\e[22m"
 
 function _render_lines(fig::Figure, io::IO)::Vector{String}
     rows, cols = size(fig.panels)
@@ -16,7 +18,7 @@ function _render_lines(fig::Figure, io::IO)::Vector{String}
     panel_width = max(24, fld(total_width - panel_spacing * (cols - 1), cols))
     header_lines = String[]
     if !isempty(fig.title)
-        push!(header_lines, _center_text(fig.title, total_width))
+        push!(header_lines, _bold_text(_center_text(fig.title, total_width), color_enabled))
     end
 
     panel_scans = [_scan_panel(panel) for panel in fig.panels]
@@ -80,14 +82,14 @@ function _render_panel_block(
     panel = prepared.panel
     top_lines = String[]
     if !isempty(panel.title)
-        push!(top_lines, _center_text(panel.title, left_width + right_width + plot_width + 4))
+        push!(top_lines, _bold_text(_center_text(panel.title, left_width + right_width + plot_width + 4), color_enabled))
     end
-
-    label_line = _axis_label_line(panel, left_width, right_width, plot_width)
-    !isempty(strip(label_line)) && push!(top_lines, label_line)
 
     legend_lines = _legend_lines(prepared, plot_width + left_width + right_width + 4, color_enabled)
     append!(top_lines, legend_lines)
+
+    label_line = _axis_label_line(panel, left_width, right_width, plot_width)
+    !isempty(strip(label_line)) && push!(top_lines, label_line)
 
     bottom_fixed = 2 + (!isempty(panel.xaxis.label) ? 1 : 0)
     overhead = length(top_lines) + bottom_fixed
@@ -163,7 +165,7 @@ function _legend_lines(prepared::PreparedPanel, width::Int, color_enabled::Bool)
     for (plain_width, styled) in items
         sep = current_plain == 0 ? 0 : 2
         if current_plain > 0 && current_plain + sep + plain_width > width
-            push!(lines, String(take!(current)))
+            push!(lines, _center_styled_text(String(take!(current)), width))
             current_plain = 0
         end
         if current_plain > 0
@@ -173,7 +175,7 @@ function _legend_lines(prepared::PreparedPanel, width::Int, color_enabled::Bool)
         write(current, color_enabled ? styled : _strip_ansi(styled))
         current_plain += plain_width
     end
-    current_plain > 0 && push!(lines, String(take!(current)))
+    current_plain > 0 && push!(lines, _center_styled_text(String(take!(current)), width))
     lines
 end
 
@@ -303,6 +305,19 @@ function _center_text(text::AbstractString, width::Int)::String
     left = fld(pad, 2)
     right = pad - left
     string(" " ^ left, clipped, " " ^ right)
+end
+
+function _center_styled_text(text::AbstractString, width::Int)::String
+    plain = _strip_ansi(text)
+    pad = max(width - textwidth(plain), 0)
+    left = fld(pad, 2)
+    right = pad - left
+    string(" " ^ left, text, " " ^ right)
+end
+
+function _bold_text(text::AbstractString, enabled::Bool)::String
+    enabled || return String(text)
+    string(ANSI_BOLD, text, ANSI_UNBOLD)
 end
 
 function _truncate_text(text::String, width::Int)::String

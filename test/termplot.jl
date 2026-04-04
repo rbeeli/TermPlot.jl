@@ -152,3 +152,33 @@ end
         @test occursin("\e[", color_text)
     end
 end
+
+@testitem "legend is centered, y label follows legend, and titles can be bold" setup = [TermPlotSetup] begin
+    fig = Figure(; title="Figure Title", width=72, height=18)
+    panel!(fig; title="Panel Title", xlabel="x", ylabel="Value")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series", color=:cyan)
+
+    buffer = IOBuffer()
+    io = IOContext(buffer, :color => true)
+    withenv("NO_COLOR" => nothing) do
+        render!(io, fig)
+    end
+    text = String(take!(buffer))
+    lines = split(text, '\n')
+
+    title_ix = findfirst(line -> occursin("Panel Title", line), lines)
+    legend_ix = findfirst(line -> occursin("[-]", line) && occursin("Series", line), lines)
+    ylabel_ix = findfirst(line -> occursin("Value", line), lines)
+    @test !isnothing(title_ix)
+    @test !isnothing(legend_ix)
+    @test !isnothing(ylabel_ix)
+    @test title_ix < legend_ix < ylabel_ix
+
+    legend_line = TermPlot._strip_ansi(lines[legend_ix])
+    leading = length(match(r"^ *", legend_line).match)
+    trailing = length(match(r" *$", legend_line).match)
+    @test abs(leading - trailing) <= 1
+
+    @test occursin("\e[1m", text)
+    @test occursin("\e[22m", text)
+end
