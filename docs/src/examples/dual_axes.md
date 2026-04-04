@@ -66,9 +66,3 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
-
-Typical uses:
-
-- equity and drawdown
-- price and z-score
-- level and percentage utilization

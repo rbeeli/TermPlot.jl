@@ -82,9 +82,3 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
-
-This works well for:
-
-- normalized price series
-- strategy versus benchmark charts
-- indicator overlays on one axis

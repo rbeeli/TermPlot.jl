@@ -46,9 +46,3 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
-
-Typical uses:
-
-- side-by-side strategy comparison
-- aligned diagnostic panels
-- simple multi-view terminal reports

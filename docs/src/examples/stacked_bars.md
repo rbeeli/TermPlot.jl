@@ -54,9 +54,3 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
-
-Typical uses:
-
-- portfolio composition snapshots
-- categorical decomposition
-- sampled allocation history
