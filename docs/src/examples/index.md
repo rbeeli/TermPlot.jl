@@ -1,6 +1,7 @@
 # Examples
 
 The examples live in the docs rather than in a separate root-level `examples/` folder.
+Each example page renders the actual ANSI terminal chart during the docs build, so the output stays in sync with the code.
 
 Each example family has its own page so the documentation stays readable:
 

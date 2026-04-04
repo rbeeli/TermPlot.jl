@@ -2,11 +2,13 @@
 
 Stacked bars are useful for compositions and grouped categorical breakdowns.
 
-```julia
+The chart below is generated during the docs build.
+
+```@ansi stacked_bars
 using TermPlot
 
-fig = Figure(title="Stacked Bar Example")
-panel!(fig; title="Allocation Mix", xlabel="Bucket", ylabel="Weight %")
+fig = Figure(title="Stacked Bar Example", width=96, height=22);
+panel!(fig; title="Allocation Mix", xlabel="Bucket", ylabel="Weight %");
 
 stackedbar!(
     fig,
@@ -17,11 +19,14 @@ stackedbar!(
     labels=["Risky", "Defensive", "Cash"],
     colors=[:cyan, :yellow, :green],
     width=0.8,
-)
+);
 
-ylims!(fig, 0, 100)
+ylims!(fig, 0, 100);
 
-display(fig)
+withenv("NO_COLOR" => nothing) do
+    render!(IOContext(stdout, :color => true), fig)
+    println()
+end
 ```
 
 Typical uses:
