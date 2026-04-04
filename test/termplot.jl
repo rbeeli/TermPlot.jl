@@ -19,6 +19,10 @@ end
     @test occursin("Date", text)
     @test occursin("[-] Series", text)
     @test occursin("[=] Mid", text)
+    @test occursin("┌", text)
+    @test occursin("└", text)
+    @test occursin("│", text)
+    @test occursin("┬", text)
     @test any(ch -> ch == '⠁' || ch == '⣀' || ch == '⠤' || (UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff), text)
 end
 

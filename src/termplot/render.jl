@@ -1,3 +1,13 @@
+const FRAME_TOP_LEFT = '┌'
+const FRAME_TOP_RIGHT = '┐'
+const FRAME_BOTTOM_LEFT = '└'
+const FRAME_BOTTOM_RIGHT = '┘'
+const FRAME_HORIZONTAL = '─'
+const FRAME_VERTICAL = '│'
+const FRAME_LEFT_TICK = '├'
+const FRAME_RIGHT_TICK = '┤'
+const FRAME_BOTTOM_TICK = '┬'
+
 function _render_lines(fig::Figure, io::IO)::Vector{String}
     rows, cols = size(fig.panels)
     color_enabled = _color_enabled(io)
@@ -106,8 +116,8 @@ function _render_panel_block(
         if !isempty(tick_rows_right[row])
             right_label = rpad(tick_rows_right[row], right_width)
         end
-        left_border = isempty(tick_rows_left[row]) ? '|' : '+'
-        right_border = isempty(tick_rows_right[row]) ? '|' : '+'
+        left_border = isempty(tick_rows_left[row]) ? FRAME_VERTICAL : FRAME_LEFT_TICK
+        right_border = isempty(tick_rows_right[row]) ? FRAME_VERTICAL : FRAME_RIGHT_TICK
         push!(
             out,
             string(
@@ -208,15 +218,31 @@ function _legend_items(prepared::PreparedPanel)
 end
 
 function _top_border(left_width::Int, plot_width::Int, right_width::Int)::String
-    string(" " ^ left_width, " +", "-" ^ plot_width, "+ ", " " ^ right_width)
+    string(
+        " " ^ left_width,
+        ' ',
+        FRAME_TOP_LEFT,
+        string(FRAME_HORIZONTAL) ^ plot_width,
+        FRAME_TOP_RIGHT,
+        ' ',
+        " " ^ right_width,
+    )
 end
 
 function _bottom_border(left_width::Int, plot_width::Int, right_width::Int, tick_cols::Vector{Int})::String
-    chars = collect("-" ^ plot_width)
+    chars = fill(FRAME_HORIZONTAL, plot_width)
     for col in tick_cols
-        1 <= col <= plot_width && (chars[col] = '+')
+        1 <= col <= plot_width && (chars[col] = FRAME_BOTTOM_TICK)
     end
-    string(" " ^ left_width, " +", String(chars), "+ ", " " ^ right_width)
+    string(
+        " " ^ left_width,
+        ' ',
+        FRAME_BOTTOM_LEFT,
+        String(chars),
+        FRAME_BOTTOM_RIGHT,
+        ' ',
+        " " ^ right_width,
+    )
 end
 
 function _x_tick_line(
