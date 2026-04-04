@@ -67,6 +67,7 @@ end
     @test occursin("A", text)
     @test occursin("B", text)
     @test occursin("C", text)
+    @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
 end
 
 @testitem "missing and non-finite values do not error" setup = [TermPlotSetup] begin

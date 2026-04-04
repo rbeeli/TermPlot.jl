@@ -1,11 +1,13 @@
 function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_height::Int)::PlotCanvas
     masks = fill(UInt8(0), plot_height, plot_width)
     mask_colors = fill(nothing, plot_height, plot_width)
+    fills = fill(UInt8(0), plot_height, plot_width)
+    fill_colors = fill(nothing, plot_height, plot_width)
     guides = fill('\0', plot_height, plot_width)
     guide_colors = fill(nothing, plot_height, plot_width)
     overlays = fill('\0', plot_height, plot_width)
     overlay_colors = fill(nothing, plot_height, plot_width)
-    canvas = PlotCanvas(masks, mask_colors, guides, guide_colors, overlays, overlay_colors)
+    canvas = PlotCanvas(masks, mask_colors, fills, fill_colors, guides, guide_colors, overlays, overlay_colors)
 
     auto_ix = 0
     for series in prepared.panel.series
@@ -196,7 +198,7 @@ function _fill_bar!(
     ymax = clamp(max(lo, hi), 0, plot_height * 4 - 1)
     for suby in ymin:ymax
         for subx in xmin:xmax
-            _set_subpixel!(canvas, subx, suby, color)
+            _set_fill_subpixel!(canvas, subx, suby, color)
         end
     end
 end
@@ -209,6 +211,8 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
             (canvas.overlays[row, col], canvas.overlay_colors[row, col])
         elseif canvas.guides[row, col] != '\0'
             (canvas.guides[row, col], canvas.guide_colors[row, col])
+        elseif canvas.fills[row, col] != 0x00
+            (_bar_fill_char(canvas.fills[row, col]), canvas.fill_colors[row, col])
         else
             mask = canvas.masks[row, col]
             (mask == 0x00 ? ' ' : Char(0x2800 + mask), canvas.mask_colors[row, col])
@@ -220,6 +224,15 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     end
     color_enabled && !isnothing(active) && write(io, "\e[0m")
     String(take!(io))
+end
+
+function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)
+    cell_row = fld(suby, 4) + 1
+    cell_col = fld(subx, 2) + 1
+    dot = _braille_dot(mod(subx, 2), mod(suby, 4))
+    canvas.fills[cell_row, cell_col] |= UInt8(dot)
+    canvas.fill_colors[cell_row, cell_col] = color
+    nothing
 end
 
 function _set_guide_cell!(canvas::PlotCanvas, row::Int, col::Int, orientation::Symbol, color::Symbol)
@@ -239,6 +252,38 @@ function _merge_guide_char(existing::Char, orientation::Symbol)::Char
     existing == '─' && return '┼'
     existing
 end
+
+function _bar_fill_char(mask::UInt8)::Char
+    qmask = _quadrant_mask(mask)
+    get(QUADRANT_CHARS, qmask, '█')
+end
+
+function _quadrant_mask(mask::UInt8)::UInt8
+    left_top = (mask & UInt8(0x01 | 0x02)) != 0
+    right_top = (mask & UInt8(0x08 | 0x10)) != 0
+    left_bottom = (mask & UInt8(0x04 | 0x40)) != 0
+    right_bottom = (mask & UInt8(0x20 | 0x80)) != 0
+    UInt8(left_top) | (UInt8(right_top) << 1) | (UInt8(left_bottom) << 2) | (UInt8(right_bottom) << 3)
+end
+
+const QUADRANT_CHARS = Dict{UInt8,Char}(
+    0x00 => ' ',
+    0x01 => '▘',
+    0x02 => '▝',
+    0x03 => '▀',
+    0x04 => '▖',
+    0x05 => '▌',
+    0x06 => '▞',
+    0x07 => '▛',
+    0x08 => '▗',
+    0x09 => '▚',
+    0x0a => '▐',
+    0x0b => '▜',
+    0x0c => '▄',
+    0x0d => '▙',
+    0x0e => '▟',
+    0x0f => '█',
+)
 
 function _write_color_transition!(io::IO, active, next)
     if active === next
