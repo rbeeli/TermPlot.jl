@@ -54,7 +54,6 @@ Documenter.makedocs(
         repo=DOCS_REPO,
         devurl="dev",
         devbranch="main",
-        deploy_url="https://rbeeli.github.io/TermPlot.jl",
         description="Pure Julia terminal plotting with Unicode rasterization and ANSI colors.",
         deploy_decision=deployment,
     ),
