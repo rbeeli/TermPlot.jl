@@ -91,6 +91,7 @@ end
     @test occursin("◆ Hits", text)
     @test occursin("[=] Rebalance", text)
     @test occursin("[=] Flat", text)
+    @test occursin("┼", text)
 end
 
 @testitem "dual axis render" setup = [TermPlotSetup] begin

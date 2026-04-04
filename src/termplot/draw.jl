@@ -1,9 +1,11 @@
 function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_height::Int)::PlotCanvas
     masks = fill(UInt8(0), plot_height, plot_width)
     mask_colors = fill(nothing, plot_height, plot_width)
+    guides = fill('\0', plot_height, plot_width)
+    guide_colors = fill(nothing, plot_height, plot_width)
     overlays = fill('\0', plot_height, plot_width)
     overlay_colors = fill(nothing, plot_height, plot_width)
-    canvas = PlotCanvas(masks, mask_colors, overlays, overlay_colors)
+    canvas = PlotCanvas(masks, mask_colors, guides, guide_colors, overlays, overlay_colors)
 
     auto_ix = 0
     for series in prepared.panel.series
@@ -141,7 +143,10 @@ function _draw_hline!(
     axis = series.yside === :right ? prepared.yright : prepared.yleft
     row = _value_to_suby(series.y, axis, plot_height * 4)
     isnothing(row) && return
-    _draw_segment!(canvas, 0.0, Float64(row), Float64(plot_width * 2 - 1), Float64(row), color)
+    cell_row = clamp(fld(row, 4) + 1, 1, plot_height)
+    for cell_col in 1:plot_width
+        _set_guide_cell!(canvas, cell_row, cell_col, :horizontal, color)
+    end
 end
 
 function _draw_vline!(
@@ -156,7 +161,10 @@ function _draw_vline!(
     isfinite(x) || return
     col = _value_to_subx(x, prepared.xaxis, plot_width * 2)
     isnothing(col) && return
-    _draw_segment!(canvas, Float64(col), 0.0, Float64(col), Float64(plot_height * 4 - 1), color)
+    cell_col = clamp(fld(col, 2) + 1, 1, plot_width)
+    for cell_row in 1:plot_height
+        _set_guide_cell!(canvas, cell_row, cell_col, :vertical, color)
+    end
 end
 
 function _fill_bar!(
@@ -199,6 +207,8 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     for col in axes(canvas.masks, 2)
         ch, color = if canvas.overlays[row, col] != '\0'
             (canvas.overlays[row, col], canvas.overlay_colors[row, col])
+        elseif canvas.guides[row, col] != '\0'
+            (canvas.guides[row, col], canvas.guide_colors[row, col])
         else
             mask = canvas.masks[row, col]
             (mask == 0x00 ? ' ' : Char(0x2800 + mask), canvas.mask_colors[row, col])
@@ -210,6 +220,24 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     end
     color_enabled && !isnothing(active) && write(io, "\e[0m")
     String(take!(io))
+end
+
+function _set_guide_cell!(canvas::PlotCanvas, row::Int, col::Int, orientation::Symbol, color::Symbol)
+    existing = canvas.guides[row, col]
+    canvas.guides[row, col] = _merge_guide_char(existing, orientation)
+    canvas.guide_colors[row, col] = color
+    nothing
+end
+
+function _merge_guide_char(existing::Char, orientation::Symbol)::Char
+    if orientation === :horizontal
+        existing == '\0' && return '─'
+        existing == '│' && return '┼'
+        return existing
+    end
+    existing == '\0' && return '│'
+    existing == '─' && return '┼'
+    existing
 end
 
 function _write_color_transition!(io::IO, active, next)

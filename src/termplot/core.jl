@@ -108,6 +108,8 @@ end
 struct PlotCanvas
     masks::Matrix{UInt8}
     mask_colors::Matrix{Union{Nothing,Symbol}}
+    guides::Matrix{Char}
+    guide_colors::Matrix{Union{Nothing,Symbol}}
     overlays::Matrix{Char}
     overlay_colors::Matrix{Union{Nothing,Symbol}}
 end
