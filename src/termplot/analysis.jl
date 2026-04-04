@@ -86,7 +86,7 @@ function _scan_panel(panel::Panel)
         end
     end
 
-    xlimits = _effective_limits(panel.xaxis, xvalues; pad_fraction=0.02)
+    xlimits = _effective_limits(panel.xaxis, xvalues; pad_fraction=_x_pad_fraction(panel))
     yleft_limits = _effective_limits(panel.yaxis_left, yleft_values; pad_fraction=panel.yaxis_left.scale === :log10 ? 0.0 : 0.05)
     yright_limits = _effective_limits(panel.yaxis_right, yright_values; pad_fraction=panel.yaxis_right.scale === :log10 ? 0.0 : 0.05)
     (xcontext=xcontext, xlimits=xlimits, yleft_limits=yleft_limits, yright_limits=yright_limits, has_right_axis=has_right_axis)
@@ -148,6 +148,10 @@ function _effective_limits(axis::Axis, values::Vector{Float64}; pad_fraction::Fl
     end
     span = hi - lo
     return lo - span * pad_fraction, hi + span * pad_fraction
+end
+
+function _x_pad_fraction(panel::Panel)::Float64
+    any(series -> series isa Bar, panel.series) ? 0.0 : 0.02
 end
 
 function _expand_degenerate_limits(limits::Tuple{Float64,Float64}; scale::Symbol=:linear)
