@@ -58,6 +58,7 @@ nothing # hide
 ## Time-Based Allocation
 
 This variant uses a `Date` x-axis and `width=1.0` so consecutive time buckets touch with no gap.
+The allocation rotates across risk-on, defensive, and inflation-sensitive sleeves instead of drifting one-way.
 
 ```@setup stacked_bars_time
 using Dates
@@ -72,16 +73,37 @@ panel!(
     x_date_format=dateformat"yyyy-mm-dd",
 );
 
-x = [Date(2024, 1, 5) + Week(i) for i in 0:7];
+x = [Date(2024, 1, 5) + Week(i) for i in 0:11];
+
+allocations = [
+    0.32 0.20 0.08 0.18 0.22;
+    0.28 0.24 0.10 0.20 0.18;
+    0.22 0.30 0.12 0.18 0.18;
+    0.18 0.34 0.14 0.12 0.22;
+    0.16 0.32 0.18 0.10 0.24;
+    0.20 0.26 0.16 0.16 0.22;
+    0.27 0.22 0.12 0.22 0.17;
+    0.31 0.18 0.10 0.24 0.17;
+    0.26 0.20 0.09 0.27 0.18;
+    0.22 0.24 0.11 0.22 0.21;
+    0.19 0.29 0.13 0.16 0.23;
+    0.24 0.23 0.15 0.14 0.24;
+];
+
+equities = allocations[:, 1];
+bonds = allocations[:, 2];
+gold = allocations[:, 3];
+commodities = allocations[:, 4];
+cash = allocations[:, 5];
 
 stackedbar!(
     fig,
     x,
-    [0.28, 0.26, 0.24, 0.22, 0.20, 0.18, 0.17, 0.16],
-    [0.22, 0.24, 0.23, 0.21, 0.19, 0.18, 0.17, 0.16],
-    [0.18, 0.17, 0.19, 0.20, 0.18, 0.17, 0.16, 0.15],
-    [0.16, 0.15, 0.14, 0.16, 0.18, 0.20, 0.21, 0.22],
-    [0.16, 0.18, 0.20, 0.21, 0.25, 0.27, 0.29, 0.31];
+    equities,
+    bonds,
+    gold,
+    commodities,
+    cash;
     labels=["Equities", "Bonds", "Gold", "Commodities", "Cash"],
     colors=[:cyan, :blue, :yellow, :magenta, :green],
     width=1.0,
@@ -103,16 +125,37 @@ panel!(
     x_date_format=dateformat"yyyy-mm-dd",
 )
 
-x = [Date(2024, 1, 5) + Week(i) for i in 0:7]
+x = [Date(2024, 1, 5) + Week(i) for i in 0:11]
+
+allocations = [
+    0.32 0.20 0.08 0.18 0.22;
+    0.28 0.24 0.10 0.20 0.18;
+    0.22 0.30 0.12 0.18 0.18;
+    0.18 0.34 0.14 0.12 0.22;
+    0.16 0.32 0.18 0.10 0.24;
+    0.20 0.26 0.16 0.16 0.22;
+    0.27 0.22 0.12 0.22 0.17;
+    0.31 0.18 0.10 0.24 0.17;
+    0.26 0.20 0.09 0.27 0.18;
+    0.22 0.24 0.11 0.22 0.21;
+    0.19 0.29 0.13 0.16 0.23;
+    0.24 0.23 0.15 0.14 0.24;
+]
+
+equities = allocations[:, 1]
+bonds = allocations[:, 2]
+gold = allocations[:, 3]
+commodities = allocations[:, 4]
+cash = allocations[:, 5]
 
 stackedbar!(
     fig,
     x,
-    [0.28, 0.26, 0.24, 0.22, 0.20, 0.18, 0.17, 0.16],
-    [0.22, 0.24, 0.23, 0.21, 0.19, 0.18, 0.17, 0.16],
-    [0.18, 0.17, 0.19, 0.20, 0.18, 0.17, 0.16, 0.15],
-    [0.16, 0.15, 0.14, 0.16, 0.18, 0.20, 0.21, 0.22],
-    [0.16, 0.18, 0.20, 0.21, 0.25, 0.27, 0.29, 0.31];
+    equities,
+    bonds,
+    gold,
+    commodities,
+    cash;
     labels=["Equities", "Bonds", "Gold", "Commodities", "Cash"],
     colors=[:cyan, :blue, :yellow, :magenta, :green],
     width=1.0,
