@@ -1,9 +1,23 @@
 # TermPlot.jl
 
+[![Docs](https://img.shields.io/badge/docs-live-blue.svg)](https://rbeeli.github.io/TermPlot.jl/)
+[![Docs build and deploy](https://github.com/rbeeli/TermPlot.jl/actions/workflows/Docs.yml/badge.svg)](https://github.com/rbeeli/TermPlot.jl/actions/workflows/Docs.yml)
+[![Julia](https://img.shields.io/badge/julia-1.10%2B-9558B2.svg)](https://julialang.org/)
+[![License](https://img.shields.io/github/license/rbeeli/TermPlot.jl.svg)](https://github.com/rbeeli/TermPlot.jl/blob/main/LICENSE)
+
 Pure Julia terminal plotting with Unicode rasterization and ANSI colors.
 
 `TermPlot.jl` is a lightweight plotting library for REPL and script output.
 It focuses on readable terminal charts instead of heavyweight GUI backends.
+
+Documentation: <https://rbeeli.github.io/TermPlot.jl/>
+
+## Installation
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
+```
 
 ## Features
 
@@ -35,6 +49,8 @@ display(fig)
 ```
 
 ## Documentation
+
+Browse the full docs at <https://rbeeli.github.io/TermPlot.jl/>.
 
 Examples live in the docs under `docs/src/examples/`, split by use case rather than duplicated as root-level scripts.
 
