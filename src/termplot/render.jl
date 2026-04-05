@@ -45,7 +45,7 @@ function _render_lines(fig::Figure, io::IO)::Vector{String}
     isempty(fig.placements) && return header_lines
 
     panel_scans = [_scan_panel(placement.panel) for placement in fig.placements]
-    shared_x = fig.linkx ? _combine_shared_x(panel_scans) : nothing
+    shared_x = fig.linkx ? _combine_shared_x(panel_scans, [placement.panel for placement in fig.placements]) : nothing
     shared_left = fig.linky ? _combine_shared_y(panel_scans, fig.placements, :left) : nothing
     shared_right = fig.linky ? _combine_shared_y(panel_scans, fig.placements, :right) : nothing
     prepared = [_prepare_panel(fig.placements[i].panel, panel_scans[i], shared_x, shared_left, shared_right) for i in eachindex(fig.placements)]

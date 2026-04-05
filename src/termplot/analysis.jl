@@ -1,3 +1,11 @@
+Base.@kwdef mutable struct PanelScanAccumulator
+    xvalues::Vector{Float64} = Float64[]
+    yleft_values::Vector{Float64} = Float64[]
+    yright_values::Vector{Float64} = Float64[]
+    has_left_data::Bool = false
+    has_right_data::Bool = false
+end
+
 function _prepare_panel(
     panel::Panel,
     scan,
@@ -32,91 +40,25 @@ end
 
 function _scan_panel(panel::Panel)
     xcontext = _infer_xcontext(panel)
-    xvalues = Float64[]
-    yleft_values = Float64[]
-    yright_values = Float64[]
-    has_left_data = false
-    has_right_data = false
-
+    scan = PanelScanAccumulator()
     for series in panel.series
-        if series isa Line || series isa Scatter || series isa Stem
-            axis_values = series.yside === :right ? yright_values : yleft_values
-            for (x_raw, y_raw) in zip(series.x, series.y)
-                x = _convert_x(x_raw, xcontext)
-                y = _finite_y(y_raw)
-                isfinite(x) || continue
-                isfinite(y) || continue
-                _check_y_valid(y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
-                push!(xvalues, x)
-                push!(axis_values, y)
-                if series isa Stem
-                    _check_y_valid(series.baseline, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
-                    push!(axis_values, series.baseline)
-                end
-                if series.yside === :right
-                    has_right_data = true
-                else
-                    has_left_data = true
-                end
-            end
-        elseif series isa Bar
-            axis_values = series.yside === :right ? yright_values : yleft_values
-            positions = [_convert_x(value, xcontext) for value in series.x]
-            half_width = _bar_half_width(positions, series.width)
-            for bar_ix in eachindex(positions)
-                x = positions[bar_ix]
-                isfinite(x) || continue
-                push!(xvalues, x - half_width)
-                push!(xvalues, x + half_width)
-                pos_total = 0.0
-                neg_total = 0.0
-                for stack in series.ys
-                    y = _finite_y(stack[bar_ix])
-                    isfinite(y) || continue
-                    _check_y_valid(y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
-                    if y >= 0.0
-                        pos_total += y
-                    else
-                        neg_total += y
-                    end
-                end
-                push!(axis_values, pos_total)
-                push!(axis_values, neg_total)
-                if series.yside === :right
-                    has_right_data = true
-                else
-                    has_left_data = true
-                end
-            end
-        elseif series isa HLine
-            axis_values = series.yside === :right ? yright_values : yleft_values
-            _check_y_valid(series.y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
-            push!(axis_values, series.y)
-            if series.yside === :right
-                has_right_data = true
-            else
-                has_left_data = true
-            end
-        elseif series isa VLine
-            x = _convert_x(series.x, xcontext)
-            isfinite(x) && push!(xvalues, x)
-        end
+        _scan_series!(scan, panel, xcontext, series)
     end
 
-    xlimits = _effective_xlimits(panel.xaxis, xvalues, xcontext; pad_fraction=_x_pad_fraction(panel))
-    yleft_limits = _effective_limits(panel.yaxis_left, yleft_values; pad_fraction=panel.yaxis_left.scale === :log10 ? 0.0 : 0.05)
-    yright_limits = _effective_limits(panel.yaxis_right, yright_values; pad_fraction=panel.yaxis_right.scale === :log10 ? 0.0 : 0.05)
+    xlimits = _effective_xlimits(panel.xaxis, scan.xvalues, xcontext; pad_fraction=_x_pad_fraction(panel))
+    yleft_limits = _effective_limits(panel.yaxis_left, scan.yleft_values; pad_fraction=panel.yaxis_left.scale === :log10 ? 0.0 : 0.05)
+    yright_limits = _effective_limits(panel.yaxis_right, scan.yright_values; pad_fraction=panel.yaxis_right.scale === :log10 ? 0.0 : 0.05)
     (
         xcontext=xcontext,
         xlimits=xlimits,
         yleft_limits=yleft_limits,
         yright_limits=yright_limits,
-        has_left_data=has_left_data,
-        has_right_data=has_right_data,
+        has_left_data=scan.has_left_data,
+        has_right_data=scan.has_right_data,
     )
 end
 
-function _combine_shared_x(scans)
+function _combine_shared_x(scans, panels)
     kinds = unique(scan.xcontext.kind for scan in scans)
     length(kinds) <= 1 || throw(ArgumentError("linked x-axes require panels with a consistent x-axis type"))
     xcontext = isempty(scans) ? XContext(:numeric, nothing, String[], Dict{String,Float64}()) : scans[1].xcontext
@@ -130,9 +72,158 @@ function _combine_shared_x(scans)
             end
         end
         xcontext = _categorical_context(categories)
+        limits = _combine_limits(
+            (
+                _effective_xlimits(panel.xaxis, _panel_xvalues(panel, xcontext), xcontext; pad_fraction=_x_pad_fraction(panel)) for
+                panel in panels
+            );
+            scale=:linear,
+        )
+        return (xcontext=xcontext, limits=limits)
     end
     limits = _combine_limits((scan.xlimits for scan in scans); scale=:linear)
     (xcontext=xcontext, limits=limits)
+end
+
+function _panel_xvalues(panel::Panel, xcontext::XContext)::Vector{Float64}
+    xvalues = Float64[]
+    for series in panel.series
+        _append_series_xvalues!(xvalues, xcontext, series)
+    end
+    xvalues
+end
+
+_series_axis(panel::Panel, yside::Symbol) = yside === :right ? panel.yaxis_right : panel.yaxis_left
+_series_axis_values(scan::PanelScanAccumulator, yside::Symbol) = yside === :right ? scan.yright_values : scan.yleft_values
+
+function _mark_series_side!(scan::PanelScanAccumulator, yside::Symbol)
+    if yside === :right
+        scan.has_right_data = true
+    else
+        scan.has_left_data = true
+    end
+    nothing
+end
+
+function _scan_series!(scan::PanelScanAccumulator, panel::Panel, xcontext::XContext, series::Union{Line,Scatter})
+    yaxis = _series_axis(panel, series.yside)
+    axis_values = _series_axis_values(scan, series.yside)
+    has_sample = false
+    for (x_raw, y_raw) in zip(series.x, series.y)
+        x = _convert_x(x_raw, xcontext)
+        y = _finite_y(y_raw)
+        isfinite(x) || continue
+        isfinite(y) || continue
+        _check_y_valid(y, yaxis)
+        push!(scan.xvalues, x)
+        push!(axis_values, y)
+        has_sample = true
+    end
+    has_sample && _mark_series_side!(scan, series.yside)
+    nothing
+end
+
+function _scan_series!(scan::PanelScanAccumulator, panel::Panel, xcontext::XContext, series::Stem)
+    yaxis = _series_axis(panel, series.yside)
+    axis_values = _series_axis_values(scan, series.yside)
+    has_sample = false
+    for (x_raw, y_raw) in zip(series.x, series.y)
+        x = _convert_x(x_raw, xcontext)
+        y = _finite_y(y_raw)
+        isfinite(x) || continue
+        isfinite(y) || continue
+        _check_y_valid(y, yaxis)
+        push!(scan.xvalues, x)
+        push!(axis_values, y)
+        has_sample = true
+    end
+    if has_sample
+        _check_y_valid(series.baseline, yaxis)
+        push!(axis_values, series.baseline)
+        _mark_series_side!(scan, series.yside)
+    end
+    nothing
+end
+
+function _scan_series!(scan::PanelScanAccumulator, panel::Panel, xcontext::XContext, series::Bar)
+    axis_values = _series_axis_values(scan, series.yside)
+    yaxis = _series_axis(panel, series.yside)
+    positions = _bar_positions(series, xcontext)
+    half_width = _bar_half_width(positions, series.width)
+    has_sample = false
+    for bar_ix in eachindex(positions)
+        x = positions[bar_ix]
+        isfinite(x) || continue
+        _append_bar_span_xvalues!(scan.xvalues, x, half_width)
+        pos_total = 0.0
+        neg_total = 0.0
+        for stack in series.ys
+            y = _finite_y(stack[bar_ix])
+            isfinite(y) || continue
+            _check_y_valid(y, yaxis)
+            if y >= 0.0
+                pos_total += y
+            else
+                neg_total += y
+            end
+        end
+        push!(axis_values, pos_total)
+        push!(axis_values, neg_total)
+        has_sample = true
+    end
+    has_sample && _mark_series_side!(scan, series.yside)
+    nothing
+end
+
+function _scan_series!(scan::PanelScanAccumulator, panel::Panel, xcontext::XContext, series::HLine)
+    axis_values = _series_axis_values(scan, series.yside)
+    _check_y_valid(series.y, _series_axis(panel, series.yside))
+    push!(axis_values, series.y)
+    _mark_series_side!(scan, series.yside)
+    nothing
+end
+
+function _scan_series!(scan::PanelScanAccumulator, ::Panel, xcontext::XContext, series::VLine)
+    x = _convert_x(series.x, xcontext)
+    isfinite(x) && push!(scan.xvalues, x)
+    nothing
+end
+
+_append_series_xvalues!(::Vector{Float64}, ::XContext, ::HLine) = nothing
+
+function _append_series_xvalues!(xvalues::Vector{Float64}, xcontext::XContext, series::Union{Line,Scatter,Stem})
+    for (x_raw, y_raw) in zip(series.x, series.y)
+        x = _convert_x(x_raw, xcontext)
+        y = _finite_y(y_raw)
+        isfinite(x) || continue
+        isfinite(y) || continue
+        push!(xvalues, x)
+    end
+    nothing
+end
+
+function _append_series_xvalues!(xvalues::Vector{Float64}, xcontext::XContext, series::Bar)
+    positions = _bar_positions(series, xcontext)
+    half_width = _bar_half_width(positions, series.width)
+    for x in positions
+        isfinite(x) || continue
+        _append_bar_span_xvalues!(xvalues, x, half_width)
+    end
+    nothing
+end
+
+function _append_series_xvalues!(xvalues::Vector{Float64}, xcontext::XContext, series::VLine)
+    x = _convert_x(series.x, xcontext)
+    isfinite(x) && push!(xvalues, x)
+    nothing
+end
+
+_bar_positions(series::Bar, xcontext::XContext) = [_convert_x(value, xcontext) for value in series.x]
+
+function _append_bar_span_xvalues!(xvalues::Vector{Float64}, x::Float64, half_width::Float64)
+    push!(xvalues, x - half_width)
+    push!(xvalues, x + half_width)
+    nothing
 end
 
 function _combine_shared_y(scans, placements, side::Symbol)

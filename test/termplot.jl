@@ -356,6 +356,25 @@ end
     @test shared_right == scan_right.yright_limits
 end
 
+@testitem "linked categorical x recomputes limits in the merged context" setup = [TermPlotSetup] begin
+    fig = Figure(GridLayout(1, 2); width=84, height=16, linkx=true, legend=false)
+    left = panel!(fig, 1, 1; xlabel="x", ylabel="y")
+    right = panel!(fig, 1, 2; xlabel="x", ylabel="y")
+
+    line!(left, ["A"], [1.0]; color=:cyan, marker=:diamond)
+    line!(right, ["B"], [1.0]; color=:yellow, marker=:diamond)
+
+    scans = [TermPlot._scan_panel(left), TermPlot._scan_panel(right)]
+    shared = TermPlot._combine_shared_x(scans, [left, right])
+    text = TermPlot._strip_ansi(render(fig))
+
+    @test shared.xcontext.kind == :categorical
+    @test shared.xcontext.categories == ["A", "B"]
+    @test shared.limits[1] < 1.0
+    @test shared.limits[2] > 1.5
+    @test count(==('◆'), text) == 2
+end
+
 @testitem "log scale validation" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; xlabel="x", ylabel="y")
