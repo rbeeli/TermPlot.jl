@@ -146,6 +146,27 @@ end
     @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
 end
 
+@testitem "stacked bars skip fully clipped stack layers on y" setup = [TermPlotSetup] begin
+    fig = Figure(; width=50, height=14, legend=false)
+    panel!(fig; xlabel="x", ylabel="y")
+    stackedbar!(fig, ["A"], [1.0], [1.0]; labels=["L1", "L2"], colors=[:cyan, :yellow])
+    ylims!(fig, 0.0, 0.5)
+
+    text = withenv("NO_COLOR" => nothing) do
+        buffer = IOBuffer()
+        render!(IOContext(buffer, :color => true), fig)
+        String(take!(buffer))
+    end
+
+    raw_lines = split(text, '\n')
+    plain_lines = TermPlot._strip_ansi.(raw_lines)
+    top_row = findfirst(line -> occursin(r"^0\.5\s", line), plain_lines)
+
+    @test !isnothing(top_row)
+    @test occursin("\e[36m", raw_lines[top_row])
+    @test !occursin("\e[33m", raw_lines[top_row])
+end
+
 @testitem "simple categorical bars render" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; title="Simple Bars", xlabel="Factor", ylabel="Score")
@@ -326,6 +347,20 @@ end
     @test occursin("Main", text)
     @test occursin("Side", text)
     @test occursin("Lower", text)
+end
+
+@testitem "x tick thinning matches final clamped label placement" setup = [TermPlotSetup] begin
+    cols = [1, 8, 15, 22, 29]
+    labels = ["1.4", "1.45", "1.5", "1.55", "1.6"]
+
+    keep = TermPlot._thin_positions(cols, labels, 40, 15)
+    kept_cols = cols[keep]
+    kept_labels = labels[keep]
+    starts = [TermPlot._tick_label_start(col, label, 40, 15) for (col, label) in zip(kept_cols, kept_labels)]
+    stops = [start + textwidth(label) - 1 for (start, label) in zip(starts, kept_labels)]
+
+    @test length(kept_cols) < length(cols)
+    @test all(starts[ix] > stops[ix - 1] for ix in 2:length(starts))
 end
 
 @testitem "complex dashboard layout renders mixed seams and spanning side sleeve" setup = [TermPlotSetup] begin

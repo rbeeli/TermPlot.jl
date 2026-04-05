@@ -389,7 +389,7 @@ function _render_panel_block(
             string(_left_row_prefix(left_label, left_border, chrome), _plot_row_string(canvas, row, color_enabled), _right_row_suffix(right_border, right_label, chrome)),
         )
     end
-    tick_cols, tick_labels = _x_tick_positions(prepared, plot_width)
+    tick_cols, tick_labels = _x_tick_positions(prepared, left_width, plot_width, right_width, chrome)
     chrome.show_bottom_frame && push!(out, _bottom_border(left_width, plot_width, right_width, tick_cols, chrome))
     chrome.show_xticks && push!(out, _x_tick_line(left_width, plot_width, right_width, tick_cols, tick_labels, chrome))
     if chrome.show_xlabel && !isempty(panel.xaxis.label)
@@ -732,7 +732,7 @@ function _x_tick_line(
     plot_offset = _left_decoration_width(left_width, chrome)
     for (col, label) in zip(tick_cols, tick_labels)
         start = plot_offset + col - fld(textwidth(label), 2)
-        start = clamp(start, 1, max(length(chars) - textwidth(label) + 1, 1))
+        start = _tick_label_start(col, label, length(chars), plot_offset)
         for (offset, ch) in enumerate(label)
             pos = start + offset - 1
             pos <= length(chars) && (chars[pos] = ch)
@@ -741,7 +741,13 @@ function _x_tick_line(
     String(chars)
 end
 
-function _x_tick_positions(prepared::PreparedPanel, plot_width::Int)
+function _x_tick_positions(
+    prepared::PreparedPanel,
+    left_width::Int,
+    plot_width::Int,
+    right_width::Int,
+    chrome::PanelChrome,
+)
     labels = copy(prepared.xaxis.tick_labels)
     max_label_width = max(4, fld(plot_width, max(length(labels), 1)))
     labels = [_truncate_text(label, max_label_width) for label in labels]
@@ -749,7 +755,9 @@ function _x_tick_positions(prepared::PreparedPanel, plot_width::Int)
         clamp(round(Int, (_normalize_value(tick, prepared.xaxis) * (plot_width - 1))) + 1, 1, plot_width) for
         tick in prepared.xaxis.ticks
     ]
-    keep = _thin_positions(cols, labels, plot_width)
+    line_width = _left_decoration_width(left_width, chrome) + plot_width + _right_decoration_width(right_width, chrome)
+    plot_offset = _left_decoration_width(left_width, chrome)
+    keep = _thin_positions(cols, labels, line_width, plot_offset)
     cols[keep], labels[keep]
 end
 

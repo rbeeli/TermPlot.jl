@@ -532,14 +532,14 @@ function _format_number(value::Float64, step::Float64)::String
     formatted
 end
 
-function _thin_positions(cols::Vector{Int}, labels::Vector{String}, width::Int)::Vector{Bool}
+function _thin_positions(cols::Vector{Int}, labels::Vector{String}, line_width::Int, plot_offset::Int)::Vector{Bool}
     isempty(cols) && return Bool[]
     for step in 1:length(cols)
         keep = falses(length(cols))
         idxs = collect(1:step:length(cols))
         last(idxs) != length(cols) && push!(idxs, length(cols))
         keep[idxs] .= true
-        _positions_fit(cols[keep], labels[keep], width) && return keep
+        _positions_fit(cols[keep], labels[keep], line_width, plot_offset) && return keep
     end
     keep = falses(length(cols))
     keep[1] = true
@@ -547,13 +547,18 @@ function _thin_positions(cols::Vector{Int}, labels::Vector{String}, width::Int):
     keep
 end
 
-function _positions_fit(cols::Vector{Int}, labels::Vector{String}, width::Int)::Bool
+function _positions_fit(cols::Vector{Int}, labels::Vector{String}, line_width::Int, plot_offset::Int)::Bool
     last_end = 0
     for (col, label) in zip(cols, labels)
-        start = max(1, col - fld(textwidth(label), 2))
-        stop = min(width, start + textwidth(label) - 1)
+        start = _tick_label_start(col, label, line_width, plot_offset)
+        stop = start + textwidth(label) - 1
         start <= last_end && return false
         last_end = stop
     end
     true
+end
+
+function _tick_label_start(col::Int, label::AbstractString, line_width::Int, plot_offset::Int)::Int
+    start = plot_offset + col - fld(textwidth(label), 2)
+    clamp(start, 1, max(line_width - textwidth(label) + 1, 1))
 end

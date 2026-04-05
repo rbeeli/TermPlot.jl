@@ -256,26 +256,41 @@ function _fill_bar!(
     plot_height::Int,
     color::Symbol,
 )
-    left = _value_to_subx(x_lo, xaxis, plot_width * 2)
-    right = _value_to_subx(x_hi, xaxis, plot_width * 2)
-    lo = _value_to_suby(y_lo, yaxis, plot_height * 4)
-    hi = _value_to_suby(y_hi, yaxis, plot_height * 4)
-    if isnothing(left) && isnothing(right)
+    xspan = _clipped_subinterval(x_lo, x_hi, xaxis, plot_width * 2, _value_to_subx)
+    yspan = _clipped_subinterval(y_lo, y_hi, yaxis, plot_height * 4, _value_to_suby)
+    if isnothing(xspan) || isnothing(yspan)
         return
     end
-    left = something(left, x_lo < xaxis.limits[1] ? 0 : plot_width * 2 - 1)
-    right = something(right, x_hi < xaxis.limits[1] ? 0 : plot_width * 2 - 1)
-    lo = something(lo, y_lo < yaxis.limits[1] ? plot_height * 4 - 1 : 0)
-    hi = something(hi, y_hi < yaxis.limits[1] ? plot_height * 4 - 1 : 0)
-    xmin = clamp(min(left, right), 0, plot_width * 2 - 1)
-    xmax = clamp(max(left, right), 0, plot_width * 2 - 1)
-    ymin = clamp(min(lo, hi), 0, plot_height * 4 - 1)
-    ymax = clamp(max(lo, hi), 0, plot_height * 4 - 1)
+    xmin = clamp(min(xspan[1], xspan[2]), 0, plot_width * 2 - 1)
+    xmax = clamp(max(xspan[1], xspan[2]), 0, plot_width * 2 - 1)
+    ymin = clamp(min(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
+    ymax = clamp(max(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
     for suby in ymin:ymax
         for subx in xmin:xmax
             _set_fill_subpixel!(canvas, subx, suby, color)
         end
     end
+end
+
+function _clipped_subinterval(
+    lo_value::Float64,
+    hi_value::Float64,
+    axis::AxisInfo,
+    subsize::Int,
+    projector::Function,
+)::Union{Nothing,Tuple{Int,Int}}
+    axis_lo, axis_hi = axis.limits
+    value_lo = min(lo_value, hi_value)
+    value_hi = max(lo_value, hi_value)
+    value_hi < axis_lo && return nothing
+    value_lo > axis_hi && return nothing
+
+    clipped_lo = clamp(lo_value, axis_lo, axis_hi)
+    clipped_hi = clamp(hi_value, axis_lo, axis_hi)
+    sub_lo = projector(clipped_lo, axis, subsize)
+    sub_hi = projector(clipped_hi, axis, subsize)
+    (isnothing(sub_lo) || isnothing(sub_hi)) && return nothing
+    sub_lo, sub_hi
 end
 
 function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::String
