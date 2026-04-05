@@ -142,6 +142,60 @@ end
     @test occursin("points", text)
 end
 
+@testitem "braille cells keep the dominant line color at crossings" setup = [TermPlotSetup] begin
+    canvas = TermPlot.PlotCanvas(
+        fill(UInt8(0), 1, 1),
+        Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
+        [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
+        fill(UInt8(0), 1, 1),
+        fill(nothing, 1, 1),
+        fill('\0', 1, 1),
+        fill(nothing, 1, 1),
+        fill('\0', 1, 1),
+        fill(nothing, 1, 1),
+    )
+    canvas.mask_colors[1, 1] = nothing
+
+    TermPlot._set_subpixel!(canvas, 0, 0, :cyan)
+    TermPlot._set_subpixel!(canvas, 1, 0, :cyan)
+    TermPlot._set_subpixel!(canvas, 0, 1, :cyan)
+    TermPlot._set_subpixel!(canvas, 1, 3, :yellow)
+
+    text = withenv("NO_COLOR" => nothing) do
+        TermPlot._plot_row_string(canvas, 1, true)
+    end
+
+    @test occursin("\e[36m", text)
+    @test !occursin("\e[33m", text)
+end
+
+@testitem "braille cell color ties prefer the later series" setup = [TermPlotSetup] begin
+    canvas = TermPlot.PlotCanvas(
+        fill(UInt8(0), 1, 1),
+        Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
+        [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
+        fill(UInt8(0), 1, 1),
+        fill(nothing, 1, 1),
+        fill('\0', 1, 1),
+        fill(nothing, 1, 1),
+        fill('\0', 1, 1),
+        fill(nothing, 1, 1),
+    )
+    canvas.mask_colors[1, 1] = nothing
+
+    TermPlot._set_subpixel!(canvas, 0, 0, :cyan)
+    TermPlot._set_subpixel!(canvas, 1, 0, :cyan)
+    TermPlot._set_subpixel!(canvas, 0, 1, :yellow)
+    TermPlot._set_subpixel!(canvas, 1, 1, :yellow)
+
+    text = withenv("NO_COLOR" => nothing) do
+        TermPlot._plot_row_string(canvas, 1, true)
+    end
+
+    @test occursin("\e[33m", text)
+    @test !occursin("\e[36m", text)
+end
+
 @testitem "scatter and vertical reference lines render" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel!(fig; title="Signals", xlabel="Date", ylabel="Score", x_date_format=dateformat"yyyy-mm-dd")
@@ -186,7 +240,19 @@ end
 end
 
 @testitem "grid layout render supports spans and overlap checks" setup = [TermPlotSetup] begin
-    fig = Figure(GridLayout(2, 3; rowweights=[2, 1], colweights=[2, 1, 1], rowgap=1, colgap=2); width=120, height=24, linkx=true)
+    fig = Figure(
+        GridLayout(
+            2,
+            3;
+            rowweights=[2, 1],
+            colweights=[2, 1, 1],
+            rowseams=GridSeam(; gap=1),
+            colseams=GridSeam(; gap=2),
+        );
+        width=120,
+        height=24,
+        linkx=true,
+    )
     main = panel!(fig, 1, 1:2; title="Main", xlabel="x", ylabel="y")
     side = panel!(fig, 1:2, 3; title="Side", xlabel="x", ylabel="z")
     lower = panel!(fig, 2, 1:2; title="Lower", xlabel="x", ylabel="spread")
@@ -205,6 +271,225 @@ end
     @test occursin("Main", text)
     @test occursin("Side", text)
     @test occursin("Lower", text)
+end
+
+@testitem "complex dashboard layout renders mixed seams and spanning side sleeve" setup = [TermPlotSetup] begin
+    fig = Figure(
+        GridLayout(
+            3,
+            4;
+            rowweights=[2.2, 1.2, 1.0],
+            colweights=[2.3, 1.3, 1.0, 1.2],
+            rowseams=[GridSeam(:adjacent), GridSeam(; gap=1)],
+            colseams=[GridSeam(:adjacent), GridSeam(:adjacent), GridSeam(; gap=2)],
+            rowaligns=:all,
+            colaligns=[:core, :core, :core, :side],
+        );
+        title="Asymmetric Dashboard",
+        width=128,
+        height=30,
+        legend=false,
+    )
+
+    trend = panel!(fig, 1, 1:3; title="Composite Trend", xlabel="Date", ylabel="Level", x_date_format=dateformat"mm-dd")
+    pullback = panel!(fig, 2, 1:2; title="Pullback", xlabel="Date", ylabel="z-score", x_date_format=dateformat"mm-dd")
+    carry = panel!(fig, 2, 3; title="Carry", xlabel="Date", ylabel="bps", x_date_format=dateformat"mm-dd")
+    breadth = panel!(fig, 3, 1:3; title="Breadth", xlabel="Date", ylabel="Share", x_date_format=dateformat"mm-dd")
+    risk = panel!(fig, 1:3, 4; title="Risk Sleeve", xlabel="Bucket", ylabel="Weight")
+
+    x = [Date(2024, 9, 1) + Day(i) for i in 0:11]
+
+    line!(trend, x, [100.0, 101.5, 103.0, 102.4, 104.2, 105.6, 106.1, 107.8, 108.5, 109.1, 110.3, 111.0]; color=:cyan)
+    line!(pullback, x, [-1.0, -0.6, -0.2, 0.4, 0.8, 0.3, -0.1, -0.5, -0.2, 0.5, 0.9, 0.6]; color=:yellow)
+    hline!(pullback, 0.0; color=:gray)
+    line!(carry, x, [8.0, 10.0, 11.0, 9.0, 13.0, 14.0, 12.0, 15.0, 16.0, 14.0, 18.0, 19.0]; color=:magenta)
+    bar!(breadth, x, [0.42, 0.48, 0.55, 0.51, 0.63, 0.68, 0.66, 0.72, 0.75, 0.71, 0.79, 0.82]; color=:green, width=0.84)
+    stackedbar!(
+        risk,
+        ["EQ", "Rates", "FX", "Cmdty"],
+        [55.0, 20.0, 15.0, 10.0],
+        [25.0, 30.0, 35.0, 30.0],
+        [20.0, 50.0, 50.0, 60.0];
+        labels=["Trend", "Carry", "Defensive"],
+        colors=[:cyan, :yellow, :blue],
+        width=0.82,
+    )
+    ylims!(risk, 0, 100)
+
+    @test fig[1, 2] === trend
+    @test fig[2, 1] === pullback
+    @test fig[2, 3] === carry
+    @test fig[3, 2] === breadth
+    @test fig[2, 4] === risk
+
+    text = TermPlot._strip_ansi(render(fig))
+    lines = split(text, '\n')
+
+    @test occursin("Asymmetric Dashboard", text)
+    @test occursin("Composite Trend", text)
+    @test occursin("Pullback", text)
+    @test occursin("Risk Sleeve", text)
+    @test occursin("EQ", text)
+    @test occursin("Rates", text)
+    @test all(Base.textwidth(line) == 128 for line in lines)
+end
+
+@testitem "adjacent seams suppress inner axes and share subplot seams" setup = [TermPlotSetup] begin
+    fig = Figure(
+        GridLayout(
+            2,
+            2;
+            rowseams=GridSeam(:adjacent),
+            colseams=GridSeam(:adjacent),
+        );
+        width=96,
+        height=22,
+        linkx=true,
+        linky=true,
+        legend=false,
+    )
+    top_left = panel!(fig, 1, 1; title="TL", xlabel="x", ylabel="y")
+    top_right = panel!(fig, 1, 2; title="TR", xlabel="x", ylabel="y")
+    bottom_left = panel!(fig, 2, 1; title="BL", xlabel="x", ylabel="y")
+    bottom_right = panel!(fig, 2, 2; title="BR", xlabel="x", ylabel="y")
+
+    line!(top_left, 1:4, [1.0, 2.0, 1.5, 3.0]; label="A")
+    line!(top_right, 1:4, [1.2, 2.1, 1.7, 2.8]; label="B")
+    line!(bottom_left, 1:4, [0.2, 0.4, 0.3, 0.5]; label="C")
+    line!(bottom_right, 1:4, [0.6, 0.5, 0.8, 0.7]; label="D")
+
+    chrome_tl = TermPlot._panel_chrome(fig.layout, fig.placements, fig.placements[1]; show_legend=false)
+    chrome_tr = TermPlot._panel_chrome(fig.layout, fig.placements, fig.placements[2]; show_legend=false)
+    chrome_bl = TermPlot._panel_chrome(fig.layout, fig.placements, fig.placements[3]; show_legend=false)
+
+    @test !chrome_tl.show_right_axis
+    @test !chrome_tl.show_xticks
+    @test !chrome_tr.show_left_axis
+    @test !chrome_tr.show_xticks
+    @test !chrome_bl.show_top_frame
+
+    text = TermPlot._strip_ansi(render(fig))
+    @test occursin("TL", text)
+    @test occursin("TR", text)
+    @test occursin("BL", text)
+    @test occursin("BR", text)
+    @test !occursin("\n\n", text)
+    @test all(Base.textwidth(line) == 96 for line in split(text, '\n'))
+end
+
+@testitem "adjacent row seams stay flush under row alignment when inner header text is absent" setup = [TermPlotSetup] begin
+    fig = Figure(
+        GridLayout(2, 1; rowseams=GridSeam(:adjacent), rowaligns=:all);
+        title="Adjacent Rows",
+        width=96,
+        height=24,
+        linkx=true,
+        legend=false,
+    )
+    top = panel!(fig, 1, 1; title="Exposure", xlabel="Bucket", ylabel="Gross")
+    bottom = panel!(fig, 2, 1; xlabel="Bucket")
+
+    x = 1:8
+    line!(top, x, [0.5, 0.7, 0.8, 0.6, 0.9, 1.0, 0.95, 1.1]; color=:yellow, marker=:circle)
+    line!(bottom, x, [-0.4, -0.1, 0.2, 0.5, 0.1, 0.6, 0.3, 0.7]; color=:cyan, marker=:diamond)
+    hline!(bottom, 0.0; color=:gray)
+
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    @test !any(line -> !isempty(line) && all(isspace, line), lines)
+end
+
+@testitem "adjacent column seams align headers cleanly under row alignment" setup = [TermPlotSetup] begin
+    fig = Figure(
+        GridLayout(1, 2; rowaligns=:all, colseams=GridSeam(:adjacent), colaligns=:all);
+        title="Adjacent Columns",
+        width=108,
+        height=20,
+        linkx=true,
+        linky=true,
+        legend=false,
+    )
+    left = panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
+    right = panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
+
+    x1 = [Date(2024, 7, 1) + Day(i) for i in 0:7]
+    x2 = [Date(2024, 7, 2) + Day(i) for i in 0:7]
+    line!(left, x1, [1.00, 1.02, 1.05, 1.03, 1.07, 1.09, 1.08, 1.11]; color=:cyan)
+    line!(right, x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; color=:magenta)
+
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    title_line = findfirst(line -> occursin("Strategy A", line) && occursin("Strategy B", line), lines)
+    ylabel_line = findfirst(line -> occursin("Normalized", line), lines)
+    top_border_line = findfirst(line -> occursin('┌', line) && occursin('┐', line), lines)
+    bottom_border_line = findfirst(line -> occursin('└', line) && occursin('┘', line), lines)
+
+    @test !isnothing(title_line)
+    @test !isnothing(ylabel_line)
+    @test !isnothing(top_border_line)
+    @test !isnothing(bottom_border_line)
+    @test title_line < ylabel_line
+    @test !occursin('┐', lines[ylabel_line])
+    @test !occursin('┌', lines[ylabel_line])
+    @test occursin('┬', lines[top_border_line])
+    @test occursin('┴', lines[bottom_border_line])
+end
+
+@testitem "grid layout can align selected plot tracks" setup = [TermPlotSetup] begin
+    function render_borders(colaligns)
+        fig = Figure(
+            GridLayout(1, 3; colseams=GridSeam(; gap=2), rowaligns=:all, colaligns=colaligns);
+            width=132,
+            height=16,
+            legend=false,
+        )
+        left = panel!(fig, 1, 1; title="Titled", xlabel="x", ylabel="y")
+        middle = panel!(fig, 1, 2; xlabel="x", ylabel="y")
+        right = panel!(fig, 1, 3; xlabel="x", ylabel="y")
+
+        line!(left, 1:4, [1.0, 2.0, 1.5, 3.0]; color=:cyan)
+        line!(middle, 1:4, [0.1, 0.2, 0.15, 0.25]; color=:yellow)
+        line!(right, 1:4, [100000.0, 120000.0, 90000.0, 110000.0]; color=:magenta)
+
+        filter(line -> occursin("┌", line), split(TermPlot._strip_ansi(render(fig)), '\n'))
+    end
+
+    loose = render_borders(:none)
+    selected = render_borders([:pair, :pair, :none])
+    aligned = render_borders(:all)
+    layout = GridLayout(2, 3; rowaligns=:all, colaligns=[:pair, :pair, :none])
+
+    @test layout.rowaligns == [1, 1]
+    @test layout.colaligns == [1, 1, 0]
+    @test length(loose) == 1
+    @test length(selected) == 1
+    @test length(aligned) == 1
+    @test count(==('┌'), first(loose)) == 3
+    @test first(selected) != first(loose)
+    @test first(aligned) != first(selected)
+end
+
+@testitem "row-aligned header labels stay anchored to the plot frame" setup = [TermPlotSetup] begin
+    fig = Figure(
+        GridLayout(1, 3; colseams=GridSeam(; gap=2), rowaligns=:all, colaligns=[:pair, :pair, :none]);
+        title="Selective Plot Alignment",
+        width=112,
+        height=16,
+        legend=false,
+    )
+    left = panel!(fig, 1, 1; title="Titled", xlabel="Bucket", ylabel="Wide Label")
+    middle = panel!(fig, 1, 2; xlabel="Bucket", ylabel="y")
+    right = panel!(fig, 1, 3; xlabel="Bucket", ylabel="y")
+
+    line!(left, 1:4, [1.0, 2.0, 1.5, 3.0]; color=:cyan)
+    line!(middle, 1:4, [0.1, 0.2, 0.15, 0.25]; color=:yellow)
+    line!(right, 1:4, [100000.0, 120000.0, 90000.0, 110000.0]; color=:magenta)
+
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    header_line = findfirst(line -> occursin("Label", line) && count(==('y'), line) == 2, lines)
+
+    @test !isnothing(header_line)
+    @test header_line < length(lines)
+    @test !occursin('┌', lines[header_line])
+    @test occursin('┌', lines[header_line + 1])
 end
 
 @testitem "color-aware render writes ANSI escapes when color is enabled" setup = [TermPlotSetup] begin

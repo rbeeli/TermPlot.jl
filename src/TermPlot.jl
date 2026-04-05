@@ -6,6 +6,7 @@ using TimeZones
 
 export Axis,
        Panel,
+       GridSeam,
        GridLayout,
        Figure,
        Line,

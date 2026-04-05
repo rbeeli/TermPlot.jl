@@ -1,13 +1,14 @@
 function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_height::Int)::PlotCanvas
     masks = fill(UInt8(0), plot_height, plot_width)
     mask_colors = fill(nothing, plot_height, plot_width)
+    mask_color_layers = [Pair{Symbol,UInt8}[] for _ in 1:plot_height, _ in 1:plot_width]
     fills = fill(UInt8(0), plot_height, plot_width)
     fill_colors = fill(nothing, plot_height, plot_width)
     guides = fill('\0', plot_height, plot_width)
     guide_colors = fill(nothing, plot_height, plot_width)
     overlays = fill('\0', plot_height, plot_width)
     overlay_colors = fill(nothing, plot_height, plot_width)
-    canvas = PlotCanvas(masks, mask_colors, fills, fill_colors, guides, guide_colors, overlays, overlay_colors)
+    canvas = PlotCanvas(masks, mask_colors, mask_color_layers, fills, fill_colors, guides, guide_colors, overlays, overlay_colors)
 
     auto_ix = 0
     for series in prepared.panel.series
@@ -280,16 +281,7 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     io = IOBuffer()
     active = nothing
     for col in axes(canvas.masks, 2)
-        ch, color = if canvas.overlays[row, col] != '\0'
-            (canvas.overlays[row, col], canvas.overlay_colors[row, col])
-        elseif canvas.guides[row, col] != '\0'
-            (canvas.guides[row, col], canvas.guide_colors[row, col])
-        elseif canvas.fills[row, col] != 0x00
-            (_bar_fill_char(canvas.fills[row, col]), canvas.fill_colors[row, col])
-        else
-            mask = canvas.masks[row, col]
-            (mask == 0x00 ? ' ' : Char(0x2800 + mask), canvas.mask_colors[row, col])
-        end
+        ch, color = _plot_cell(canvas, row, col)
         if color_enabled
             active = _write_color_transition!(io, active, color)
         end
@@ -297,6 +289,18 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     end
     color_enabled && !isnothing(active) && write(io, "\e[0m")
     String(take!(io))
+end
+
+function _plot_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{Char,Union{Nothing,Symbol}}
+    if canvas.overlays[row, col] != '\0'
+        return canvas.overlays[row, col], canvas.overlay_colors[row, col]
+    elseif canvas.guides[row, col] != '\0'
+        return canvas.guides[row, col], canvas.guide_colors[row, col]
+    elseif canvas.fills[row, col] != 0x00
+        return _bar_fill_char(canvas.fills[row, col]), canvas.fill_colors[row, col]
+    end
+    mask = canvas.masks[row, col]
+    mask == 0x00 ? (' ', nothing) : (Char(0x2800 + mask), canvas.mask_colors[row, col])
 end
 
 function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)
@@ -375,8 +379,34 @@ function _set_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)
     cell_col = fld(subx, 2) + 1
     dot = _braille_dot(mod(subx, 2), mod(suby, 4))
     canvas.masks[cell_row, cell_col] |= UInt8(dot)
-    canvas.mask_colors[cell_row, cell_col] = color
+    _merge_mask_color!(canvas.mask_color_layers[cell_row, cell_col], UInt8(dot), color)
+    canvas.mask_colors[cell_row, cell_col] = _dominant_mask_color(canvas.mask_color_layers[cell_row, cell_col])
     nothing
+end
+
+function _merge_mask_color!(layers::Vector{Pair{Symbol,UInt8}}, dot::UInt8, color::Symbol)
+    for ix in eachindex(layers)
+        if layers[ix].first === color
+            layers[ix] = color => (layers[ix].second | dot)
+            return nothing
+        end
+    end
+    push!(layers, color => dot)
+    nothing
+end
+
+function _dominant_mask_color(layers::Vector{Pair{Symbol,UInt8}})::Union{Nothing,Symbol}
+    isempty(layers) && return nothing
+    best_color = nothing
+    best_count = -1
+    for layer in layers
+        count = count_ones(layer.second)
+        if count >= best_count
+            best_count = count
+            best_color = layer.first
+        end
+    end
+    best_color
 end
 
 function _draw_segment!(canvas::PlotCanvas, x0::Float64, y0::Float64, x1::Float64, y1::Float64, color::Symbol)

@@ -29,7 +29,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 - `Date`, `DateTime`, and `ZonedDateTime` x-axes
 - manual axis limits
 - flexible axis options
-- `GridLayout` with weighted rows, weighted columns, and spanning panels
+- seam-aware `GridLayout` with weighted rows, weighted columns, spanning panels, adjacent subplots, and optional row/column plot alignment groups
 - rendering to any `IO`
 - graceful handling of missing and non-finite data
 
@@ -53,10 +53,19 @@ display(fig)
 
 Browse the full docs at <https://rbeeli.github.io/TermPlot.jl/>.
 
-`GridLayout` powers the multi-panel layout system:
+`GridLayout` and `GridSeam` power the multi-panel layout system:
 
 ```julia
-grid = GridLayout(2, 3; rowweights=[2, 1], colweights=[2, 1, 1], rowgap=1, colgap=2)
+grid = GridLayout(
+    2,
+    3;
+    rowweights=[2, 1],
+    colweights=[2, 1, 1],
+    rowseams=GridSeam(; gap=1),
+    colseams=[GridSeam(:adjacent), GridSeam(; gap=2)],
+    rowaligns=:all,
+    colaligns=[:main, :main, :side],
+)
 fig = Figure(grid; width=112, height=26)
 main = panel!(fig, 1, 1:2; title="Main")
 side = panel!(fig, 1:2, 3; title="Side")

@@ -72,13 +72,20 @@ Base.@kwdef mutable struct Panel
     series::Vector{AbstractSeries} = AbstractSeries[]
 end
 
+struct GridSeam
+    style::Symbol
+    gap::Int
+end
+
 struct GridLayout
     rows::Int
     cols::Int
     rowweights::Vector{Float64}
     colweights::Vector{Float64}
-    rowgap::Int
-    colgap::Int
+    rowseams::Vector{GridSeam}
+    colseams::Vector{GridSeam}
+    rowaligns::Vector{Int}
+    colaligns::Vector{Int}
 end
 
 struct PanelPlacement
@@ -127,6 +134,7 @@ end
 struct PlotCanvas
     masks::Matrix{UInt8}
     mask_colors::Matrix{Union{Nothing,Symbol}}
+    mask_color_layers::Matrix{Vector{Pair{Symbol,UInt8}}}
     fills::Matrix{UInt8}
     fill_colors::Matrix{Union{Nothing,Symbol}}
     guides::Matrix{Char}
@@ -140,21 +148,30 @@ function GridLayout(
     cols::Integer;
     rowweights::AbstractVector=fill(1.0, Int(rows)),
     colweights::AbstractVector=fill(1.0, Int(cols)),
-    rowgap::Integer=1,
-    colgap::Integer=3,
+    rowseams=GridSeam(:separate; gap=1),
+    colseams=GridSeam(:separate; gap=3),
+    rowaligns=:none,
+    colaligns=:none,
 )
     rows >= 1 || throw(ArgumentError("layout rows must be >= 1"))
     cols >= 1 || throw(ArgumentError("layout cols must be >= 1"))
-    rowgap >= 0 || throw(ArgumentError("rowgap must be >= 0"))
-    colgap >= 0 || throw(ArgumentError("colgap must be >= 0"))
     GridLayout(
         Int(rows),
         Int(cols),
         _normalize_layout_weights(rowweights, Int(rows), :rowweights),
         _normalize_layout_weights(colweights, Int(cols), :colweights),
-        Int(rowgap),
-        Int(colgap),
+        _normalize_layout_seams(rowseams, max(Int(rows) - 1, 0), :rowseams),
+        _normalize_layout_seams(colseams, max(Int(cols) - 1, 0), :colseams),
+        _normalize_layout_aligns(rowaligns, Int(rows), :rowaligns),
+        _normalize_layout_aligns(colaligns, Int(cols), :colaligns),
     )
+end
+
+function GridSeam(style::Symbol=:separate; gap::Integer=style === :adjacent ? 0 : 1)
+    style in (:separate, :adjacent) || throw(ArgumentError("unsupported seam style $(style)"))
+    gap >= 0 || throw(ArgumentError("seam gap must be >= 0"))
+    style === :adjacent && gap != 0 && throw(ArgumentError("adjacent seams must use gap=0"))
+    GridSeam(style, Int(gap))
 end
 
 function Figure(;
@@ -344,6 +361,48 @@ function _normalize_layout_weights(weights::AbstractVector, expected::Int, name:
         push!(values, value)
     end
     values
+end
+
+_alignment_disabled(spec) = isnothing(spec) || spec === false || spec === :none
+_alignment_all(spec) = spec === true || spec === :all
+
+_normalize_layout_seam(seam::GridSeam) = seam
+_normalize_layout_seam(style::Symbol) = GridSeam(style)
+
+function _normalize_layout_seams(seams, expected::Int, name::Symbol)::Vector{GridSeam}
+    expected == 0 && return GridSeam[]
+    if seams isa AbstractVector
+        length(seams) == expected || throw(ArgumentError("$(name) must have length $(expected)"))
+        return [_normalize_layout_seam(seam) for seam in seams]
+    end
+    fill(_normalize_layout_seam(seams), expected)
+end
+
+function _normalize_layout_aligns(aligns, expected::Int, name::Symbol)::Vector{Int}
+    expected == 0 && return Int[]
+    if _alignment_disabled(aligns)
+        return fill(0, expected)
+    elseif _alignment_all(aligns)
+        return fill(1, expected)
+    elseif aligns isa AbstractVector
+        length(aligns) == expected || throw(ArgumentError("$(name) must have length $(expected)"))
+        groups = Dict{Any,Int}()
+        next_group = Ref(1)
+        values = Vector{Int}(undef, expected)
+        for (ix, align) in pairs(aligns)
+            if _alignment_disabled(align)
+                values[ix] = 0
+            else
+                values[ix] = get!(groups, align) do
+                    group = next_group[]
+                    next_group[] += 1
+                    group
+                end
+            end
+        end
+        return values
+    end
+    throw(ArgumentError("$(name) must be :none, :all, true/false, nothing, or a vector of alignment groups"))
 end
 
 function _normalize_span(spec::Int, upper::Int, axis_name::Symbol)::UnitRange{Int}

@@ -18,12 +18,12 @@ pages = [
         "Overview" => "examples/index.md",
         "Line Charts" => "examples/line.md",
         "Bar Charts" => "examples/bars.md",
+        "Stacked Bars" => "examples/stacked_bars.md",
         "Scatter Plots" => "examples/scatter.md",
         "Reference Lines" => "examples/reference_lines.md",
-        "Labels And Legends" => "examples/labels_legends.md",
         "Axes" => "examples/axes.md",
-        "Stacked Bars" => "examples/stacked_bars.md",
         "Layouts" => "examples/layouts.md",
+        "Labels And Legends" => "examples/labels_legends.md",
     ],
 ]
 
