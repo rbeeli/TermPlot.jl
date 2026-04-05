@@ -70,6 +70,21 @@ end
     @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
 end
 
+@testitem "simple categorical bars render" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=18)
+    panel!(fig; title="Simple Bars", xlabel="Factor", ylabel="Score")
+    bar!(fig, ["Value", "Quality", "Momentum", "Carry"], [0.8, 0.6, 0.9, 0.5]; label="Signal", color=:cyan, width=0.8)
+    ylims!(fig, 0, 1)
+    text = render(fig)
+    @test occursin("Simple Bars", text)
+    @test occursin("[#] Signal", text)
+    @test occursin("Value", text)
+    @test occursin("Quality", text)
+    @test occursin("Momentum", text)
+    @test occursin("Carry", text)
+    @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
+end
+
 @testitem "missing and non-finite values do not error" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; xlabel="x", ylabel="y")

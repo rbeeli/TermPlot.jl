@@ -1,6 +1,6 @@
 # TermPlot.jl
 
-`TermPlot.jl` is a pure Julia terminal plotting library for line charts, scatter plots, stacked bars, guide lines, dual y-axes, and simple linked panel layouts.
+`TermPlot.jl` is a pure Julia terminal plotting library for line charts, bar charts, scatter plots, stacked bars, guide lines, dual y-axes, and simple linked panel layouts.
 
 It is designed for direct REPL and script usage:
 
@@ -31,6 +31,7 @@ display(fig)
 - `Figure`
 - `panel!`
 - `line!`
+- `bar!`
 - `scatter!`
 - `stackedbar!`
 - `hline!`
@@ -46,6 +47,7 @@ display(fig)
 The documentation includes an organized examples section with separate pages for:
 
 - line charts
+- bar charts
 - scatter plots
 - reference lines
 - dual-axis plots

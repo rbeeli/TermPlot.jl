@@ -17,6 +17,7 @@ pages = [
     "Examples" => [
         "Overview" => "examples/index.md",
         "Line Charts" => "examples/basic.md",
+        "Bar Charts" => "examples/bars.md",
         "Scatter Plots" => "examples/scatter.md",
         "Reference Lines" => "examples/reference_lines.md",
         "Dual Axes" => "examples/dual_axes.md",

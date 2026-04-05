@@ -204,6 +204,25 @@ end
 
 function Bar(
     x::AbstractVector,
+    y::AbstractVector;
+    label::AbstractString="",
+    color=nothing,
+    width::Real=0.8,
+    yside::Union{Symbol,Integer}=:left,
+)
+    length(y) == length(x) || throw(ArgumentError("bar x/y lengths must match"))
+    Bar(
+        x,
+        AbstractVector[y],
+        [String(label)],
+        Union{Nothing,Symbol}[normalize_color(color)],
+        Float64(width),
+        yside_symbol(yside),
+    )
+end
+
+function Bar(
+    x::AbstractVector,
     ys::AbstractVector...;
     labels::AbstractVector{<:AbstractString},
     colors::AbstractVector=fill(nothing, length(ys)),

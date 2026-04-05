@@ -44,6 +44,10 @@ function scatter!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVec
     push!(currentpanel(target), Scatter(x, y; kwargs...))
 end
 
+function bar!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
+    push!(currentpanel(target), Bar(x, y; kwargs...))
+end
+
 function stackedbar!(target::Union{Figure,Panel}, x::AbstractVector, ys::AbstractVector...; kwargs...)
     push!(currentpanel(target), Bar(x, ys...; kwargs...))
 end
