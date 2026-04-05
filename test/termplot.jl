@@ -169,10 +169,18 @@ end
     end
 end
 
-@testitem "legend is centered, y label follows legend, and titles can be bold" setup = [TermPlotSetup] begin
+@testitem "legend shares header lines with wrapped axis labels and titles can be bold" setup = [TermPlotSetup] begin
     fig = Figure(; title="Figure Title", width=72, height=18)
-    panel!(fig; title="Panel Title", xlabel="x", ylabel="Value")
-    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series", color=:cyan)
+    panel!(
+        fig;
+        title="Panel Title",
+        xlabel="x",
+        ylabel="Left axis contribution label",
+        ylabel_right="Right axis drawdown label",
+    )
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series A", color=:cyan)
+    line!(fig, 1:4, [0.9, 1.4, 1.2, 1.8]; label="Series B", color=:blue)
+    hline!(fig, 1.1; label="Threshold", color=:gray)
 
     buffer = IOBuffer()
     io = IOContext(buffer, :color => true)
@@ -183,18 +191,37 @@ end
     lines = split(text, '\n')
 
     title_ix = findfirst(line -> occursin("Panel Title", line), lines)
-    legend_ix = findfirst(line -> occursin("[-]", line) && occursin("Series", line), lines)
-    ylabel_ix = findfirst(line -> occursin("Value", line), lines)
+    border_ix = findfirst(line -> occursin("┌", TermPlot._strip_ansi(line)), lines)
     @test !isnothing(title_ix)
-    @test !isnothing(legend_ix)
-    @test !isnothing(ylabel_ix)
-    @test title_ix < legend_ix < ylabel_ix
+    @test !isnothing(border_ix)
 
-    legend_line = TermPlot._strip_ansi(lines[legend_ix])
-    leading = length(match(r"^ *", legend_line).match)
-    trailing = length(match(r" *$", legend_line).match)
-    @test abs(leading - trailing) <= 1
+    header_lines = TermPlot._strip_ansi.(lines[(title_ix + 1):(border_ix - 1)])
+    @test length(header_lines) >= 2
+    @test any(line -> occursin("Series A", line), header_lines)
+    @test any(line -> occursin("Series B", line), header_lines)
+    @test any(line -> occursin("Threshold", line), header_lines)
+    @test occursin("label", header_lines[end])
+    @test occursin("Left axis", join(header_lines, "\n"))
+    @test occursin("Right axis", join(header_lines, "\n"))
+    @test !occursin("contribution label", join(header_lines[1:(end - 1)], "\n"))
+    @test !occursin("drawdown label", join(header_lines[1:(end - 1)], "\n"))
+
+    last_header = header_lines[end]
+    @test occursin("contribution label", last_header)
+    @test occursin("drawdown label", last_header)
 
     @test occursin("\e[1m", text)
     @test occursin("\e[22m", text)
+end
+
+@testitem "legend can be disabled while axis labels remain" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=18, legend=false)
+    panel!(fig; title="No Legend", xlabel="x", ylabel="Exposure label", ylabel_right="Risk label")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series", color=:cyan)
+
+    text = TermPlot._strip_ansi(render(fig))
+
+    @test occursin("Exposure label", text)
+    @test occursin("Risk label", text)
+    @test !occursin("Series", text)
 end

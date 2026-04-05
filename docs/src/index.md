@@ -50,6 +50,7 @@ The documentation includes an organized examples section with separate pages for
 - bar charts
 - scatter plots
 - reference lines
+- labels and legends
 - dual-axis plots
 - stacked bars
 - linked layouts

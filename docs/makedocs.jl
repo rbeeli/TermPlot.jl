@@ -20,6 +20,7 @@ pages = [
         "Bar Charts" => "examples/bars.md",
         "Scatter Plots" => "examples/scatter.md",
         "Reference Lines" => "examples/reference_lines.md",
+        "Labels And Legends" => "examples/labels_legends.md",
         "Dual Axes" => "examples/dual_axes.md",
         "Stacked Bars" => "examples/stacked_bars.md",
         "Linked Layouts" => "examples/linked_layouts.md",

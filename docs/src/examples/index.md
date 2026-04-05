@@ -9,6 +9,7 @@ Plot primitives:
 - [Bar Charts](bars.md)
 - [Scatter Plots](scatter.md)
 - [Reference Lines](reference_lines.md)
+- [Labels And Legends](labels_legends.md)
 - [Stacked Bars](stacked_bars.md)
 
 Layout and axis behavior:

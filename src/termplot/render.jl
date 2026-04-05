@@ -44,6 +44,7 @@ function _render_lines(fig::Figure, io::IO)::Vector{String}
                 left_width,
                 right_width,
                 color_enabled,
+                fig.legend,
             ) for col in 1:cols
         ]
         row_height = maximum(length(block) for block in blocks)
@@ -78,6 +79,7 @@ function _render_panel_block(
     left_width::Int,
     right_width::Int,
     color_enabled::Bool,
+    show_legend::Bool,
 )::Vector{String}
     panel = prepared.panel
     top_lines = String[]
@@ -85,11 +87,7 @@ function _render_panel_block(
         push!(top_lines, _bold_text(_center_text(panel.title, left_width + right_width + plot_width + 4), color_enabled))
     end
 
-    legend_lines = _legend_lines(prepared, plot_width + left_width + right_width + 4, color_enabled)
-    append!(top_lines, legend_lines)
-
-    label_line = _axis_label_line(panel, left_width, right_width, plot_width)
-    !isempty(strip(label_line)) && push!(top_lines, label_line)
+    append!(top_lines, _legend_and_label_lines(prepared, plot_width + left_width + right_width + 4, color_enabled, show_legend))
 
     bottom_fixed = 2 + (!isempty(panel.xaxis.label) ? 1 : 0)
     overhead = length(top_lines) + bottom_fixed
@@ -142,21 +140,136 @@ function _render_panel_block(
     out
 end
 
-function _axis_label_line(panel::Panel, left_width::Int, right_width::Int, plot_width::Int)::String
-    total_width = left_width + right_width + plot_width + 4
-    left = panel.yaxis_left.label
-    right = panel.yaxis_right.label
-    isempty(left) && isempty(right) && return ""
-    if isempty(right)
-        return rpad(left, total_width)
-    elseif isempty(left)
-        return lpad(right, total_width)
+function _legend_and_label_lines(
+    prepared::PreparedPanel,
+    width::Int,
+    color_enabled::Bool,
+    show_legend::Bool,
+)::Vector{String}
+    panel = prepared.panel
+    left_label = panel.yaxis_left.label
+    right_label = panel.yaxis_right.label
+    left_slot, center_slot, right_slot = _header_slot_widths(left_label, right_label, width, show_legend)
+    left_lines = _wrap_text(left_label, left_slot)
+    right_lines = _wrap_text(right_label, right_slot)
+    legend_lines = show_legend ? _legend_lines(prepared, center_slot, color_enabled) : String[]
+
+    line_count = max(length(left_lines), length(right_lines), length(legend_lines))
+    line_count == 0 && return String[]
+
+    left_block = _bottom_align_text_block(left_lines, line_count, left_slot, :left)
+    center_block = _bottom_align_styled_block(legend_lines, line_count, center_slot)
+    right_block = _bottom_align_text_block(right_lines, line_count, right_slot, :right)
+
+    [string(left_block[i], center_block[i], right_block[i]) for i in 1:line_count]
+end
+
+function _header_slot_widths(
+    left_label::AbstractString,
+    right_label::AbstractString,
+    width::Int,
+    show_legend::Bool,
+)::Tuple{Int,Int,Int}
+    left_slot = isempty(left_label) ? 0 : min(textwidth(left_label), max(fld(width, 4), 1))
+    right_slot = isempty(right_label) ? 0 : min(textwidth(right_label), max(fld(width, 4), 1))
+    min_center = show_legend ? min(max(fld(width, 3), 10), width) : 0
+    center_slot = width - left_slot - right_slot
+
+    while show_legend && center_slot < min_center && (left_slot > 1 || right_slot > 1)
+        if left_slot >= right_slot && left_slot > 1
+            left_slot -= 1
+        elseif right_slot > 1
+            right_slot -= 1
+        else
+            break
+        end
+        center_slot = width - left_slot - right_slot
     end
-    gap = max(total_width - textwidth(left) - textwidth(right), 1)
-    string(left, " " ^ gap, right)
+
+    left_slot, max(center_slot, 0), right_slot
+end
+
+function _bottom_align_text_block(
+    lines::Vector{String},
+    height::Int,
+    width::Int,
+    align::Symbol,
+)::Vector{String}
+    block = fill(" " ^ width, height)
+    start = height - length(lines)
+    for (ix, line) in enumerate(lines)
+        row = start + ix
+        block[row] = align === :right ? lpad(line, width) : rpad(line, width)
+    end
+    block
+end
+
+function _bottom_align_styled_block(lines::Vector{String}, height::Int, width::Int)::Vector{String}
+    block = fill(" " ^ width, height)
+    start = height - length(lines)
+    for (ix, line) in enumerate(lines)
+        block[start + ix] = line
+    end
+    block
+end
+
+function _wrap_text(text::AbstractString, width::Int)::Vector{String}
+    plain = String(text)
+    isempty(plain) && return String[]
+    width <= 0 && return [plain]
+    textwidth(plain) <= width && return [plain]
+
+    words = split(plain)
+    isempty(words) && return [plain]
+    lines = String[]
+    current = ""
+    for word in words
+        if isempty(current)
+            chunks = _wrap_word(word, width)
+            append!(lines, chunks[1:max(length(chunks) - 1, 0)])
+            current = chunks[end]
+            continue
+        end
+
+        candidate = string(current, " ", word)
+        if textwidth(candidate) <= width
+            current = candidate
+            continue
+        end
+
+        push!(lines, current)
+        chunks = _wrap_word(word, width)
+        append!(lines, chunks[1:max(length(chunks) - 1, 0)])
+        current = chunks[end]
+    end
+
+    !isempty(current) && push!(lines, current)
+    lines
+end
+
+function _wrap_word(word::AbstractString, width::Int)::Vector{String}
+    width <= 0 && return [String(word)]
+    textwidth(word) <= width && return [String(word)]
+
+    chunks = String[]
+    buffer = IOBuffer()
+    used = 0
+    for ch in word
+        chunk = string(ch)
+        chunk_width = textwidth(chunk)
+        if used > 0 && used + chunk_width > width
+            push!(chunks, String(take!(buffer)))
+            used = 0
+        end
+        write(buffer, ch)
+        used += chunk_width
+    end
+    used > 0 && push!(chunks, String(take!(buffer)))
+    chunks
 end
 
 function _legend_lines(prepared::PreparedPanel, width::Int, color_enabled::Bool)::Vector{String}
+    width <= 0 && return String[]
     items = _legend_items(prepared)
     isempty(items) && return String[]
     lines = String[]
