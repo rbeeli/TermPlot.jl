@@ -169,6 +169,26 @@ end
     @test occursin("Mixed", text)
 end
 
+@testitem "zoned datetime x values infer timezone and render" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=16)
+    panel = panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd HH:MM")
+    x = [
+        ZonedDateTime(2024, 1, 1, 9, 30, 0, tz"America/New_York"),
+        ZonedDateTime(2024, 1, 1, 16, 0, 0, tz"America/New_York"),
+    ]
+    line!(fig, x, [1.0, 2.0]; label="Zoned", color=:cyan)
+
+    ctx = TermPlot._infer_xcontext(panel)
+    converted = TermPlot._convert_x.(x, Ref(ctx))
+    expected = [Float64(Dates.datetime2epochms(DateTime(astimezone(value, TimeZone("UTC"))))) for value in x]
+    text = render(fig)
+
+    @test ctx.kind == :zoned
+    @test string(ctx.timezone) == "America/New_York"
+    @test converted == expected
+    @test occursin("Zoned", text)
+end
+
 @testitem "stacked categorical bars render" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; title="Bars", xlabel="Bucket", ylabel="Weight")

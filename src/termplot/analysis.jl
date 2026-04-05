@@ -365,7 +365,7 @@ function _infer_xcontext(panel::Panel)::XContext
     categories = String[]
     category_map = Dict{String,Float64}()
     kind = nothing
-    timezone = nothing
+    context_timezone = nothing
 
     function register_kind(value)
         local value_kind = _x_kind(value)
@@ -381,7 +381,7 @@ function _infer_xcontext(panel::Panel)::XContext
             end
         end
         if value_kind == :zoned
-            timezone = isnothing(timezone) ? timezoneof(value) : timezone
+            context_timezone = isnothing(context_timezone) ? TimeZones.timezone(value) : context_timezone
         elseif value_kind == :categorical
             label = string(value)
             if !haskey(category_map, label)
@@ -412,7 +412,7 @@ function _infer_xcontext(panel::Panel)::XContext
     elseif kind == :categorical
         return _categorical_context(categories)
     end
-    XContext(kind, timezone, String[], Dict{String,Float64}())
+    XContext(kind, context_timezone, String[], Dict{String,Float64}())
 end
 
 function _categorical_context(categories::Vector{String})::XContext
