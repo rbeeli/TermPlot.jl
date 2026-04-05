@@ -11,87 +11,122 @@ const ANSI_BOLD = "\e[1m"
 const ANSI_UNBOLD = "\e[22m"
 
 function _render_lines(fig::Figure, io::IO)::Vector{String}
-    rows, cols = size(fig.panels)
     color_enabled = _color_enabled(io)
     total_width = _resolve_terminal_width(io, fig.width)
-    panel_spacing = cols > 1 ? 3 : 0
-    panel_width = max(24, fld(total_width - panel_spacing * (cols - 1), cols))
     header_lines = String[]
     if !isempty(fig.title)
         push!(header_lines, _bold_text(_center_text(fig.title, total_width), color_enabled))
     end
+    isempty(fig.placements) && return header_lines
 
-    panel_scans = [_scan_panel(panel) for panel in fig.panels]
+    panel_scans = [_scan_panel(placement.panel) for placement in fig.placements]
     shared_x = fig.linkx ? _combine_shared_x(panel_scans) : nothing
-    shared_left = fig.linky ? _combine_shared_y(panel_scans, fig.panels, :left) : nothing
-    shared_right = fig.linky ? _combine_shared_y(panel_scans, fig.panels, :right) : nothing
-    prepared = [_prepare_panel(fig.panels[i], panel_scans[i], shared_x, shared_left, shared_right) for i in eachindex(fig.panels)]
-    prepared_matrix = reshape(prepared, size(fig.panels))
+    shared_left = fig.linky ? _combine_shared_y(panel_scans, fig.placements, :left) : nothing
+    shared_right = fig.linky ? _combine_shared_y(panel_scans, fig.placements, :right) : nothing
+    prepared = [_prepare_panel(fig.placements[i].panel, panel_scans[i], shared_x, shared_left, shared_right) for i in eachindex(fig.placements)]
 
-    left_width = maximum(pp.left_width for pp in prepared)
-    right_width = maximum(pp.right_width for pp in prepared)
-    plot_width = max(10, panel_width - left_width - right_width - 4)
-    title_lines = isempty(fig.title) ? 0 : 1
-    panel_height = max(10, fld(fig.height - title_lines - (rows - 1), rows))
+    preferred_left = maximum(pp.left_width for pp in prepared)
+    preferred_right = maximum(pp.right_width for pp in prepared)
+    col_widths = _layout_sizes(total_width, fig.layout.colweights, fig.layout.colgap; min_size=24)
+    body_height = max(fig.height - length(header_lines), fig.layout.rows)
+    row_heights = _layout_sizes(body_height, fig.layout.rowweights, fig.layout.rowgap; min_size=8)
+    body_lines = sum(row_heights) + fig.layout.rowgap * (fig.layout.rows - 1)
+    placed_lines = [Tuple{Int,Int,String}[] for _ in 1:body_lines]
 
-    row_blocks = Vector{Vector{String}}()
-    for row in 1:rows
-        blocks = [
-            _render_panel_block(
-                prepared_matrix[row, col],
-                plot_width,
-                panel_height,
-                left_width,
-                right_width,
-                color_enabled,
-                fig.legend,
-            ) for col in 1:cols
-        ]
-        row_height = maximum(length(block) for block in blocks)
-        padded = [_pad_block(block, row_height, left_width + right_width + plot_width + 4) for block in blocks]
-        combined = String[]
-        for line_ix in 1:row_height
-            push!(combined, join((block[line_ix] for block in padded), " " ^ panel_spacing))
+    for (placement, prepared_panel) in zip(fig.placements, prepared)
+        block_width = _span_size(col_widths, fig.layout.colgap, placement.cols)
+        block_height = _span_size(row_heights, fig.layout.rowgap, placement.rows)
+        block = _render_panel_block(
+            prepared_panel,
+            block_width,
+            block_height,
+            preferred_left,
+            preferred_right,
+            color_enabled,
+            fig.legend,
+        )
+        x0 = _layout_offset(col_widths, fig.layout.colgap, first(placement.cols))
+        y0 = _layout_offset(row_heights, fig.layout.rowgap, first(placement.rows))
+        for (line_ix, line) in pairs(block)
+            push!(placed_lines[y0 + line_ix - 1], (x0, block_width, line))
         end
-        push!(row_blocks, combined)
     end
 
     out = copy(header_lines)
-    for (ix, block) in enumerate(row_blocks)
-        append!(out, block)
-        ix < length(row_blocks) && push!(out, "")
+    for segments in placed_lines
+        push!(out, _compose_styled_line(segments))
     end
     out
 end
 
-function _pad_block(block::Vector{String}, height::Int, width::Int)::Vector{String}
-    padded = copy(block)
-    while length(padded) < height
-        push!(padded, " " ^ width)
+function _layout_sizes(total::Int, weights::Vector{Float64}, gap::Int; min_size::Int)::Vector{Int}
+    n = length(weights)
+    usable = max(total - gap * (n - 1), n)
+    baseline = usable >= min_size * n ? min_size : 1
+    sizes = fill(baseline, n)
+    extra = usable - baseline * n
+    if extra > 0
+        sizes .+= _proportional_sizes(extra, weights)
     end
-    padded
+    sizes
+end
+
+function _proportional_sizes(total::Int, weights::Vector{Float64})::Vector{Int}
+    total <= 0 && return fill(0, length(weights))
+    raw = total .* weights ./ sum(weights)
+    sizes = floor.(Int, raw)
+    remainder = total - sum(sizes)
+    fractions = raw .- sizes
+    order = sortperm(eachindex(weights); by=i -> fractions[i], rev=true)
+    for ix in 1:remainder
+        sizes[order[mod1(ix, length(order))]] += 1
+    end
+    sizes
+end
+
+_span_size(sizes::Vector{Int}, gap::Int, span::UnitRange{Int}) = sum(sizes[span]) + gap * (length(span) - 1)
+
+function _layout_offset(sizes::Vector{Int}, gap::Int, start_ix::Int)::Int
+    start_ix == 1 && return 1
+    1 + sum(sizes[1:(start_ix - 1)]) + gap * (start_ix - 1)
+end
+
+function _compose_styled_line(segments::Vector{Tuple{Int,Int,String}})::String
+    isempty(segments) && return ""
+    sorted = sort(segments; by=first)
+    io = IOBuffer()
+    cursor = 1
+    for (x0, width, line) in sorted
+        gap = x0 - cursor
+        gap > 0 && write(io, " " ^ gap)
+        write(io, line)
+        cursor = x0 + width
+    end
+    String(take!(io))
 end
 
 function _render_panel_block(
     prepared::PreparedPanel,
-    plot_width::Int,
+    target_width::Int,
     target_height::Int,
-    left_width::Int,
-    right_width::Int,
+    preferred_left_width::Int,
+    preferred_right_width::Int,
     color_enabled::Bool,
     show_legend::Bool,
 )::Vector{String}
     panel = prepared.panel
+    left_width, right_width = _fit_axis_widths(prepared, target_width, preferred_left_width, preferred_right_width)
+    plot_width = max(1, target_width - left_width - right_width - 4)
     top_lines = String[]
     if !isempty(panel.title)
-        push!(top_lines, _bold_text(_center_text(panel.title, left_width + right_width + plot_width + 4), color_enabled))
+        push!(top_lines, _bold_text(_center_text(panel.title, target_width), color_enabled))
     end
 
-    append!(top_lines, _legend_and_label_lines(prepared, plot_width + left_width + right_width + 4, color_enabled, show_legend))
+    append!(top_lines, _legend_and_label_lines(prepared, target_width, color_enabled, show_legend))
 
-    bottom_fixed = 2 + (!isempty(panel.xaxis.label) ? 1 : 0)
-    overhead = length(top_lines) + bottom_fixed
-    plot_height = max(4, target_height - overhead)
+    fixed_lines = 3 + (!isempty(panel.xaxis.label) ? 1 : 0)
+    top_lines = _fit_top_lines(top_lines, max(target_height - fixed_lines - 1, 0))
+    plot_height = max(1, target_height - length(top_lines) - fixed_lines)
 
     canvas = _render_plot_canvas(prepared, plot_width, plot_height)
     tick_rows_left = fill("", plot_height)
@@ -110,11 +145,11 @@ function _render_panel_block(
     for row in 1:plot_height
         left_label = rpad("", left_width)
         if !isempty(tick_rows_left[row])
-            left_label = lpad(tick_rows_left[row], left_width)
+            left_label = lpad(_truncate_text(tick_rows_left[row], left_width), left_width)
         end
         right_label = rpad("", right_width)
         if !isempty(tick_rows_right[row])
-            right_label = rpad(tick_rows_right[row], right_width)
+            right_label = rpad(_truncate_text(tick_rows_right[row], right_width), right_width)
         end
         left_border = isempty(tick_rows_left[row]) ? FRAME_VERTICAL : FRAME_LEFT_TICK
         right_border = isempty(tick_rows_right[row]) ? FRAME_VERTICAL : FRAME_RIGHT_TICK
@@ -135,9 +170,40 @@ function _render_panel_block(
     push!(out, _bottom_border(left_width, plot_width, right_width, tick_cols))
     push!(out, _x_tick_line(left_width, plot_width, right_width, tick_cols, tick_labels))
     if !isempty(panel.xaxis.label)
-        push!(out, _center_text(panel.xaxis.label, left_width + right_width + plot_width + 4))
+        push!(out, _center_text(panel.xaxis.label, target_width))
     end
     out
+end
+
+function _fit_axis_widths(
+    prepared::PreparedPanel,
+    target_width::Int,
+    preferred_left_width::Int,
+    preferred_right_width::Int,
+)::Tuple{Int,Int}
+    left_width = min(prepared.left_width, preferred_left_width)
+    right_width = prepared.has_right_axis ? min(prepared.right_width, preferred_right_width) : 0
+    available = max(target_width - 5, 0)
+    if left_width + right_width <= available
+        return left_width, right_width
+    elseif left_width == 0
+        return 0, available
+    elseif right_width == 0
+        return available, 0
+    end
+    left = round(Int, available * left_width / (left_width + right_width))
+    left = clamp(left, 0, available)
+    right = available - left
+    left, right
+end
+
+function _fit_top_lines(lines::Vector{String}, available::Int)::Vector{String}
+    available <= 0 && return String[]
+    length(lines) <= available && return lines
+    if available == 1
+        return [first(lines)]
+    end
+    [first(lines); lines[(end - available + 2):end]...]
 end
 
 function _legend_and_label_lines(

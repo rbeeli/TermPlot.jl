@@ -282,32 +282,32 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Linked Axes Example", width=108, height=24, layout=(1, 2), linkx=true, linky=true);
+fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=108, height=24, linkx=true, linky=true);
 
-panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
-panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
+left = panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
+right = panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
 
 x1 = [Date(2024, 7, 1) + Day(i) for i in 0:7];
 x2 = [Date(2024, 7, 2) + Day(i) for i in 0:7];
 
-line!(fig.panels[1, 1], x1, [1.00, 1.02, 1.05, 1.03, 1.07, 1.09, 1.08, 1.11]; label="A", color=:cyan);
-line!(fig.panels[1, 2], x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; label="B", color=:magenta);
+line!(left, x1, [1.00, 1.02, 1.05, 1.03, 1.07, 1.09, 1.08, 1.11]; label="A", color=:cyan);
+line!(right, x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; label="B", color=:magenta);
 ```
 
 ```julia
 using Dates
 using TermPlot
 
-fig = Figure(title="Linked Axes Example", width=108, height=24, layout=(1, 2), linkx=true, linky=true)
+fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=108, height=24, linkx=true, linky=true)
 
-panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
-panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
+left = panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
+right = panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
 
 x1 = [Date(2024, 7, 1) + Day(i) for i in 0:7]
 x2 = [Date(2024, 7, 2) + Day(i) for i in 0:7]
 
-line!(fig.panels[1, 1], x1, [1.00, 1.02, 1.05, 1.03, 1.07, 1.09, 1.08, 1.11]; label="A", color=:cyan)
-line!(fig.panels[1, 2], x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; label="B", color=:magenta)
+line!(left, x1, [1.00, 1.02, 1.05, 1.03, 1.07, 1.09, 1.08, 1.11]; label="A", color=:cyan)
+line!(right, x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; label="B", color=:magenta)
 
 display(fig)
 ```

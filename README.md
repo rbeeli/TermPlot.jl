@@ -29,7 +29,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 - `Date`, `DateTime`, and `ZonedDateTime` x-axes
 - manual axis limits
 - flexible axis options
-- multi-panel layouts
+- `GridLayout` with weighted rows, weighted columns, and spanning panels
 - rendering to any `IO`
 - graceful handling of missing and non-finite data
 
@@ -52,6 +52,16 @@ display(fig)
 ## Documentation
 
 Browse the full docs at <https://rbeeli.github.io/TermPlot.jl/>.
+
+`GridLayout` powers the multi-panel layout system:
+
+```julia
+grid = GridLayout(2, 3; rowweights=[2, 1], colweights=[2, 1, 1], rowgap=1, colgap=2)
+fig = Figure(grid; width=112, height=26)
+main = panel!(fig, 1, 1:2; title="Main")
+side = panel!(fig, 1:2, 3; title="Side")
+lower = panel!(fig, 2, 1:2; title="Lower")
+```
 
 Examples live in the docs under `docs/src/examples/`, split by use case rather than duplicated as root-level scripts.
 

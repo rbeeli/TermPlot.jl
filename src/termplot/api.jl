@@ -1,7 +1,7 @@
 function panel!(
     fig::Figure,
-    row::Int=1,
-    col::Int=1;
+    row::Union{Int,UnitRange{Int}}=1,
+    col::Union{Int,UnitRange{Int}}=1;
     title::AbstractString="",
     xlabel::AbstractString="",
     ylabel::AbstractString="",
@@ -13,8 +13,9 @@ function panel!(
     y2scale::Symbol=:linear,
     x_date_format::Union{Nothing,DateFormat}=nothing,
 )
-    checkbounds(fig.panels, row, col)
-    fig.panels[row, col] = _make_panel(;
+    rows = _normalize_span(row, fig.layout.rows, :row)
+    cols = _normalize_span(col, fig.layout.cols, :col)
+    panel = _make_panel(;
         title,
         xlabel,
         ylabel,
@@ -26,7 +27,21 @@ function panel!(
         y2scale,
         x_date_format,
     )
-    fig
+    placement = PanelPlacement(rows, cols, panel)
+
+    exact_ix = findfirst(existing -> existing.rows == rows && existing.cols == cols, fig.placements)
+    if !isnothing(exact_ix)
+        fig.placements[exact_ix] = placement
+    else
+        overlap_ix = findfirst(existing -> _placement_overlap(rows, cols, existing.rows, existing.cols), fig.placements)
+        if !isnothing(overlap_ix)
+            throw(ArgumentError("panel placement rows=$(rows), cols=$(cols) overlaps an existing panel placement"))
+        end
+        push!(fig.placements, placement)
+    end
+
+    fig.current = panel
+    panel
 end
 
 function Base.push!(panel::Panel, series::AbstractSeries)
@@ -35,6 +50,20 @@ function Base.push!(panel::Panel, series::AbstractSeries)
 end
 
 Base.push!(fig::Figure, series::AbstractSeries) = push!(currentpanel(fig), series)
+
+function Base.getindex(fig::Figure, row::Int, col::Int)::Panel
+    row in 1:fig.layout.rows || throw(BoundsError(1:fig.layout.rows, row))
+    col in 1:fig.layout.cols || throw(BoundsError(1:fig.layout.cols, col))
+    placement = findfirst(slot -> row in slot.rows && col in slot.cols, fig.placements)
+    isnothing(placement) && throw(KeyError((row, col)))
+    fig.placements[placement].panel
+end
+
+function Base.getindex(fig::Figure, rows::UnitRange{Int}, cols::UnitRange{Int})::Panel
+    placement = findfirst(slot -> slot.rows == rows && slot.cols == cols, fig.placements)
+    isnothing(placement) && throw(KeyError((rows, cols)))
+    fig.placements[placement].panel
+end
 
 function line!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Line(x, y; kwargs...))

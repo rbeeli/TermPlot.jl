@@ -48,7 +48,9 @@ end
     @test occursin("[-] Post", text)
     @test occursin("[-] Mid", text)
     @test occursin("[-] Pre", text)
-    @test_throws ArgumentError line!(Figure(), [1, 2], [1, 2]; step=:bad)
+    bad = Figure()
+    panel!(bad)
+    @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; step=:bad)
 end
 
 @testitem "line markers render and validate marker inputs" setup = [TermPlotSetup] begin
@@ -64,20 +66,22 @@ end
     @test occursin("▲─ Custom", text)
     @test occursin("◆", text)
     @test occursin("▲", text)
-    @test_throws ArgumentError line!(Figure(), [1, 2], [1, 2]; marker="not a marker")
+    bad = Figure()
+    panel!(bad)
+    @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; marker="not a marker")
 end
 
 @testitem "datetime formatting" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=16)
-    panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")
+    panel = panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")
     x = [Date(2024, 1, 1), Date(2024, 1, 3)]
     line!(fig, x, [1.0, 2.0]; label="L")
     xlims!(fig, Date(2024, 1, 1), Date(2024, 1, 3))
-    ctx = TermPlot._infer_xcontext(fig.panels[1, 1])
+    ctx = TermPlot._infer_xcontext(panel)
     labels = TermPlot._format_x_ticks(
         [Float64(Dates.datetime2epochms(DateTime(Date(2024, 1, 1))))],
         ctx,
-        fig.panels[1, 1].xaxis.date_format,
+        panel.xaxis.date_format,
     )
     @test labels == ["2024-01-01"]
     @test occursin("2024-01-01", render(fig))
@@ -181,15 +185,26 @@ end
     @test_throws ArgumentError render(bad)
 end
 
-@testitem "linked layout render" setup = [TermPlotSetup] begin
-    fig = Figure(; width=120, height=22, layout=(1, 2), linkx=true, linky=true)
-    panel!(fig, 1, 1; title="Left", xlabel="x", ylabel="y")
-    panel!(fig, 1, 2; title="Right", xlabel="x", ylabel="y")
-    line!(fig.panels[1, 1], 1:5, [1, 2, 3, 2, 1]; label="A")
-    line!(fig.panels[1, 2], 2:6, [10, 9, 8, 7, 6]; label="B")
+@testitem "grid layout render supports spans and overlap checks" setup = [TermPlotSetup] begin
+    fig = Figure(GridLayout(2, 3; rowweights=[2, 1], colweights=[2, 1, 1], rowgap=1, colgap=2); width=120, height=24, linkx=true)
+    main = panel!(fig, 1, 1:2; title="Main", xlabel="x", ylabel="y")
+    side = panel!(fig, 1:2, 3; title="Side", xlabel="x", ylabel="z")
+    lower = panel!(fig, 2, 1:2; title="Lower", xlabel="x", ylabel="spread")
+
+    line!(main, 1:5, [1, 2, 3, 2, 1]; label="A")
+    line!(side, 1:5, [10, 9, 8, 7, 6]; label="B")
+    line!(lower, 1:5, [0.0, 0.5, -0.2, 0.7, 0.1]; label="C")
+
+    @test fig[1, 1] === main
+    @test fig[1, 3] === side
+    @test fig[2, 2] === lower
+    @test fig[1:2, 3:3] === side
+    @test_throws ArgumentError panel!(fig, 1, 2:3; title="Overlap")
+
     text = render(fig)
-    @test occursin("Left", text)
-    @test occursin("Right", text)
+    @test occursin("Main", text)
+    @test occursin("Side", text)
+    @test occursin("Lower", text)
 end
 
 @testitem "color-aware render writes ANSI escapes when color is enabled" setup = [TermPlotSetup] begin

@@ -72,11 +72,28 @@ Base.@kwdef mutable struct Panel
     series::Vector{AbstractSeries} = AbstractSeries[]
 end
 
+struct GridLayout
+    rows::Int
+    cols::Int
+    rowweights::Vector{Float64}
+    colweights::Vector{Float64}
+    rowgap::Int
+    colgap::Int
+end
+
+struct PanelPlacement
+    rows::UnitRange{Int}
+    cols::UnitRange{Int}
+    panel::Panel
+end
+
 mutable struct Figure
     title::String
     width::Union{Nothing,Int}
     height::Int
-    panels::Matrix{Panel}
+    layout::GridLayout
+    placements::Vector{PanelPlacement}
+    current::Union{Nothing,Panel}
     linkx::Bool
     linky::Bool
     legend::Bool
@@ -118,24 +135,41 @@ struct PlotCanvas
     overlay_colors::Matrix{Union{Nothing,Symbol}}
 end
 
+function GridLayout(
+    rows::Integer,
+    cols::Integer;
+    rowweights::AbstractVector=fill(1.0, Int(rows)),
+    colweights::AbstractVector=fill(1.0, Int(cols)),
+    rowgap::Integer=1,
+    colgap::Integer=3,
+)
+    rows >= 1 || throw(ArgumentError("layout rows must be >= 1"))
+    cols >= 1 || throw(ArgumentError("layout cols must be >= 1"))
+    rowgap >= 0 || throw(ArgumentError("rowgap must be >= 0"))
+    colgap >= 0 || throw(ArgumentError("colgap must be >= 0"))
+    GridLayout(
+        Int(rows),
+        Int(cols),
+        _normalize_layout_weights(rowweights, Int(rows), :rowweights),
+        _normalize_layout_weights(colweights, Int(cols), :colweights),
+        Int(rowgap),
+        Int(colgap),
+    )
+end
+
 function Figure(;
     title::AbstractString="",
     width::Union{Nothing,Int}=nothing,
     height::Int=24,
-    layout::Tuple{Int,Int}=(1, 1),
+    layout::GridLayout=GridLayout(1, 1),
     linkx::Bool=false,
     linky::Bool=false,
     legend::Bool=true,
 )
-    rows, cols = layout
-    rows >= 1 || throw(ArgumentError("layout rows must be >= 1"))
-    cols >= 1 || throw(ArgumentError("layout cols must be >= 1"))
-    panels = Matrix{Panel}(undef, rows, cols)
-    for i in eachindex(panels)
-        panels[i] = Panel()
-    end
-    Figure(String(title), width, max(height, 12), panels, linkx, linky, legend)
+    Figure(String(title), width, max(height, 12), layout, PanelPlacement[], nothing, linkx, linky, legend)
 end
+
+Figure(layout::GridLayout; kwargs...) = Figure(; layout, kwargs...)
 
 function _make_panel(;
     title::AbstractString="",
@@ -161,7 +195,12 @@ function _make_panel(;
     )
 end
 
-currentpanel(fig::Figure) = fig.panels[1, 1]
+function currentpanel(fig::Figure)
+    !isnothing(fig.current) && return fig.current
+    isempty(fig.placements) && throw(ArgumentError("figure has no panels; add one with panel! first"))
+    fig.placements[end].panel
+end
+
 currentpanel(panel::Panel) = panel
 
 normalize_color(::Nothing) = nothing
@@ -294,6 +333,37 @@ function _normalize_line_step(step::Symbol)::Symbol
 end
 
 _normalize_line_step(step::AbstractString) = _normalize_line_step(Symbol(lowercase(String(step))))
+
+function _normalize_layout_weights(weights::AbstractVector, expected::Int, name::Symbol)::Vector{Float64}
+    length(weights) == expected || throw(ArgumentError("$(name) must have length $(expected)"))
+    values = Float64[]
+    for weight in weights
+        weight isa Real || throw(ArgumentError("$(name) entries must be real"))
+        value = Float64(weight)
+        isfinite(value) && value > 0.0 || throw(ArgumentError("$(name) entries must be positive finite values"))
+        push!(values, value)
+    end
+    values
+end
+
+function _normalize_span(spec::Int, upper::Int, axis_name::Symbol)::UnitRange{Int}
+    1 <= spec <= upper || throw(BoundsError(1:upper, spec))
+    spec:spec
+end
+
+function _normalize_span(spec::UnitRange{Int}, upper::Int, axis_name::Symbol)::UnitRange{Int}
+    isempty(spec) && throw(ArgumentError("$(axis_name) span must not be empty"))
+    first(spec) <= last(spec) || throw(ArgumentError("$(axis_name) span must increase"))
+    1 <= first(spec) <= upper || throw(BoundsError(1:upper, spec))
+    1 <= last(spec) <= upper || throw(BoundsError(1:upper, spec))
+    spec
+end
+
+_spans_overlap(a::UnitRange{Int}, b::UnitRange{Int}) = max(first(a), first(b)) <= min(last(a), last(b))
+
+function _placement_overlap(rows_a::UnitRange{Int}, cols_a::UnitRange{Int}, rows_b::UnitRange{Int}, cols_b::UnitRange{Int})::Bool
+    _spans_overlap(rows_a, rows_b) && _spans_overlap(cols_a, cols_b)
+end
 
 function _braille_dot(dx::Int, dy::Int)::UInt8
     if dx == 0

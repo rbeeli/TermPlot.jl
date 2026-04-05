@@ -143,33 +143,33 @@ The filled markers show the exact underlying sample locations.
 ```@setup step_line_plots
 using TermPlot
 
-fig = Figure(title="Step Modes", width=96, height=34, layout=(3, 1), linkx=true, linky=true, legend=false);
-panel!(fig, 1, 1, title="Post", xlabel="Bucket", ylabel="Allocation");
-panel!(fig, 2, 1, title="Mid", xlabel="Bucket", ylabel="Allocation");
-panel!(fig, 3, 1, title="Pre", xlabel="Bucket", ylabel="Allocation");
+fig = Figure(GridLayout(3, 1); title="Step Modes", width=96, height=34, linkx=true, linky=true, legend=false);
+post = panel!(fig, 1, 1; title="Post", xlabel="Bucket", ylabel="Allocation");
+mid = panel!(fig, 2, 1; title="Mid", xlabel="Bucket", ylabel="Allocation");
+pre = panel!(fig, 3, 1; title="Pre", xlabel="Bucket", ylabel="Allocation");
 
 x = 1:7;
 values = [0.20, 0.55, 0.35, 0.72, 0.50, 0.84, 0.68];
 
-line!(fig.panels[1, 1], x, values; color=:cyan, step=:post, marker='●');
-line!(fig.panels[2, 1], x, values; color=:yellow, step=:mid, marker='●');
-line!(fig.panels[3, 1], x, values; color=:magenta, step=:pre, marker='●');
+line!(post, x, values; color=:cyan, step=:post, marker='●');
+line!(mid, x, values; color=:yellow, step=:mid, marker='●');
+line!(pre, x, values; color=:magenta, step=:pre, marker='●');
 ```
 
 ```julia
 using TermPlot
 
-fig = Figure(title="Step Modes", width=96, height=34, layout=(3, 1), linkx=true, linky=true, legend=false)
-panel!(fig, 1, 1, title="Post", xlabel="Bucket", ylabel="Allocation")
-panel!(fig, 2, 1, title="Mid", xlabel="Bucket", ylabel="Allocation")
-panel!(fig, 3, 1, title="Pre", xlabel="Bucket", ylabel="Allocation")
+fig = Figure(GridLayout(3, 1); title="Step Modes", width=96, height=34, linkx=true, linky=true, legend=false)
+post = panel!(fig, 1, 1; title="Post", xlabel="Bucket", ylabel="Allocation")
+mid = panel!(fig, 2, 1; title="Mid", xlabel="Bucket", ylabel="Allocation")
+pre = panel!(fig, 3, 1; title="Pre", xlabel="Bucket", ylabel="Allocation")
 
 x = 1:7
 values = [0.20, 0.55, 0.35, 0.72, 0.50, 0.84, 0.68]
 
-line!(fig.panels[1, 1], x, values; color=:cyan, step=:post, marker='●')
-line!(fig.panels[2, 1], x, values; color=:yellow, step=:mid, marker='●')
-line!(fig.panels[3, 1], x, values; color=:magenta, step=:pre, marker='●')
+line!(post, x, values; color=:cyan, step=:post, marker='●')
+line!(mid, x, values; color=:yellow, step=:mid, marker='●')
+line!(pre, x, values; color=:magenta, step=:pre, marker='●')
 
 display(fig)
 ```

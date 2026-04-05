@@ -111,8 +111,9 @@ function _combine_shared_x(scans)
     (xcontext=xcontext, limits=limits)
 end
 
-function _combine_shared_y(scans, panels, side::Symbol)
-    scale = side === :left ? panels[1].yaxis_left.scale : panels[1].yaxis_right.scale
+function _combine_shared_y(scans, placements, side::Symbol)
+    panel = placements[1].panel
+    scale = side === :left ? panel.yaxis_left.scale : panel.yaxis_right.scale
     limits = _combine_limits(
         side === :left ? (scan.yleft_limits for scan in scans) : (scan.yright_limits for scan in scans);
         scale,
