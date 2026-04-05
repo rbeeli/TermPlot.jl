@@ -17,6 +17,7 @@ pages = [
     "Examples" => [
         "Overview" => "examples/index.md",
         "Line Charts" => "examples/line.md",
+        "Stem Plots" => "examples/stems.md",
         "Bar Charts" => "examples/bars.md",
         "Stacked Bars" => "examples/stacked_bars.md",
         "Scatter Plots" => "examples/scatter.md",

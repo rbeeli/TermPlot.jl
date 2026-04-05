@@ -53,6 +53,36 @@ end
     @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; step=:bad)
 end
 
+@testitem "stem plots render and include the baseline in y limits" setup = [TermPlotSetup] begin
+    fig = Figure(; width=84, height=18)
+    panel = panel!(fig; title="Stem", xlabel="Bucket", ylabel="Signal")
+    stem!(fig, 1:5, [0.25, 0.80, -0.35, 0.55, -0.10]; label="Events", color=:cyan, marker=:diamond)
+
+    scan = TermPlot._scan_panel(panel)
+    text = render(fig)
+
+    @test scan.yleft_limits[1] <= 0.0 <= scan.yleft_limits[2]
+    @test occursin("Stem", text)
+    @test occursin("Events", text)
+    @test occursin("◆", text)
+
+    bad = Figure()
+    panel!(bad)
+    @test_throws ArgumentError stem!(bad, [1, 2], [1, 2]; baseline=Inf)
+end
+
+@testitem "stem plots clip vertical segments through y limits" setup = [TermPlotSetup] begin
+    fig = Figure(; width=40, height=12, legend=false)
+    panel!(fig; xlabel="x", ylabel="y")
+    stem!(fig, [1.0], [2.0]; color=:cyan, marker=:diamond)
+    ylims!(fig, 0.5, 1.5)
+
+    text = render(fig)
+
+    @test any(ch -> UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff, text)
+    @test !occursin("◆", text)
+end
+
 @testitem "line clipping keeps segments that enter the visible frame" setup = [TermPlotSetup] begin
     fig = Figure(; width=40, height=12, legend=false)
     panel!(fig; xlabel="x", ylabel="y")

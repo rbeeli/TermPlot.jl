@@ -15,6 +15,9 @@ function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_heig
         if series isa Line
             color = _resolve_series_color(series.color, auto_ix += 1)
             _draw_line_series!(canvas, prepared, series, plot_width, plot_height, color)
+        elseif series isa Stem
+            color = _resolve_series_color(series.color, auto_ix += 1)
+            _draw_stem_series!(canvas, prepared, series, plot_width, plot_height, color)
         elseif series isa Scatter
             color = _resolve_series_color(series.color, auto_ix += 1)
             _draw_scatter_series!(canvas, prepared, series, plot_width, plot_height, color)
@@ -59,6 +62,31 @@ function _draw_line_series!(
         end
         !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color)
         prev = point
+    end
+end
+
+function _draw_stem_series!(
+    canvas::PlotCanvas,
+    prepared::PreparedPanel,
+    series::Stem,
+    plot_width::Int,
+    plot_height::Int,
+    color::Symbol,
+)
+    xcontext = prepared.xcontext
+    yaxis = series.yside === :right ? prepared.yright : prepared.yleft
+    subwidth = plot_width * 2
+    subheight = plot_height * 4
+
+    for (x_raw, y_raw) in zip(series.x, series.y)
+        point = _series_subpoint(xcontext, prepared.xaxis, yaxis, x_raw, y_raw, subwidth, subheight)
+        isnothing(point) && continue
+        baseline_point = _series_subpoint(xcontext, prepared.xaxis, yaxis, x_raw, series.baseline, subwidth, subheight)
+        isnothing(baseline_point) && continue
+
+        _draw_clipped_segment!(canvas, baseline_point[1], baseline_point[2], point[1], point[2], subwidth, subheight, color)
+        visible_point = _point_in_bounds(point, subwidth, subheight) ? (round(Int, point[1]), round(Int, point[2])) : nothing
+        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color)
     end
 end
 

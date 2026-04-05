@@ -33,6 +33,16 @@ struct Line{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     marker::Union{Nothing,Char}
 end
 
+struct Stem{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
+    x::TX
+    y::TY
+    label::String
+    color::Union{Nothing,Symbol}
+    yside::Symbol
+    baseline::Float64
+    marker::Union{Nothing,Char}
+end
+
 struct Scatter{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     x::TX
     y::TY
@@ -275,6 +285,29 @@ function Scatter(
 )
     length(x) == length(y) || throw(ArgumentError("scatter x/y lengths must match"))
     Scatter(x, y, String(label), normalize_color(color), yside_symbol(yside), normalize_marker(marker))
+end
+
+function Stem(
+    x::AbstractVector,
+    y::AbstractVector;
+    label::AbstractString="",
+    color=nothing,
+    yside::Union{Symbol,Integer}=:left,
+    baseline::Real=0.0,
+    marker::Union{Nothing,Symbol,AbstractString,Char}="dot",
+)
+    length(x) == length(y) || throw(ArgumentError("stem x/y lengths must match"))
+    baseline_value = Float64(baseline)
+    isfinite(baseline_value) || throw(ArgumentError("stem baseline must be finite"))
+    Stem(
+        x,
+        y,
+        String(label),
+        normalize_color(color),
+        yside_symbol(yside),
+        baseline_value,
+        normalize_marker(marker),
+    )
 end
 
 function Bar(

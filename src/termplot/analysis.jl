@@ -39,7 +39,7 @@ function _scan_panel(panel::Panel)
     has_right_data = false
 
     for series in panel.series
-        if series isa Line || series isa Scatter
+        if series isa Line || series isa Scatter || series isa Stem
             axis_values = series.yside === :right ? yright_values : yleft_values
             for (x_raw, y_raw) in zip(series.x, series.y)
                 x = _convert_x(x_raw, xcontext)
@@ -49,6 +49,10 @@ function _scan_panel(panel::Panel)
                 _check_y_valid(y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
                 push!(xvalues, x)
                 push!(axis_values, y)
+                if series isa Stem
+                    _check_y_valid(series.baseline, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
+                    push!(axis_values, series.baseline)
+                end
                 if series.yside === :right
                     has_right_data = true
                 else
@@ -297,7 +301,7 @@ function _infer_xcontext(panel::Panel)::XContext
     end
 
     for series in panel.series
-        if series isa Line || series isa Scatter || series isa Bar
+        if series isa Line || series isa Scatter || series isa Stem || series isa Bar
             for value in series.x
                 ismissing(value) && continue
                 register_kind(value)

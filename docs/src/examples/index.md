@@ -3,6 +3,7 @@
 Plot primitives:
 
 - [Line Charts](line.md)
+- [Stem Plots](stems.md)
 - [Bar Charts](bars.md)
 - [Stacked Bars](stacked_bars.md)
 - [Scatter Plots](scatter.md)

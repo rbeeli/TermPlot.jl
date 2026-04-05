@@ -656,6 +656,13 @@ function _legend_items(prepared::PreparedPanel)
             plain = "$(symbol) $(series.label)"
             styled = string(_ansi_text(symbol, color), " ", series.label)
             push!(items, (textwidth(plain), styled))
+        elseif series isa Stem
+            color = _resolve_series_color(series.color, auto_ix += 1)
+            isempty(series.label) && continue
+            symbol = isnothing(series.marker) ? "[|]" : string(series.marker, '│')
+            plain = "$(symbol) $(series.label)"
+            styled = string(_ansi_text(symbol, color), " ", series.label)
+            push!(items, (textwidth(plain), styled))
         elseif series isa Scatter
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue

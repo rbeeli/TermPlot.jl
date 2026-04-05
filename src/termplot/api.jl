@@ -69,6 +69,10 @@ function line!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector
     push!(currentpanel(target), Line(x, y; kwargs...))
 end
 
+function stem!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
+    push!(currentpanel(target), Stem(x, y; kwargs...))
+end
+
 function scatter!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Scatter(x, y; kwargs...))
 end

@@ -22,6 +22,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 ## Features
 
 - line plots
+- stem plots
 - bar plots
 - scatter plots
 - stacked bar plots
