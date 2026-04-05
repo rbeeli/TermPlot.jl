@@ -21,7 +21,7 @@ function _prepare_panel(
     yright = AxisInfo(right_limits, yright_ticks, yright_labels, panel.yaxis_right.scale)
     left_width = max(maximum(textwidth.(yleft.tick_labels); init=0), 1)
     right_width = max(maximum(textwidth.(yright.tick_labels); init=0), 1)
-    has_right_axis = scan.has_right_axis || !isempty(panel.yaxis_right.label) || !isnothing(panel.yaxis_right.limits)
+    has_right_axis = scan.has_right_data || !isempty(panel.yaxis_right.label) || !isnothing(panel.yaxis_right.limits)
     if !has_right_axis
         yright = AxisInfo(right_limits, Float64[], String[], panel.yaxis_right.scale)
         right_width = 0
@@ -35,12 +35,12 @@ function _scan_panel(panel::Panel)
     xvalues = Float64[]
     yleft_values = Float64[]
     yright_values = Float64[]
-    has_right_axis = false
+    has_left_data = false
+    has_right_data = false
 
     for series in panel.series
         if series isa Line || series isa Scatter
             axis_values = series.yside === :right ? yright_values : yleft_values
-            series.yside === :right && (has_right_axis = true)
             for (x_raw, y_raw) in zip(series.x, series.y)
                 x = _convert_x(x_raw, xcontext)
                 y = _finite_y(y_raw)
@@ -49,10 +49,14 @@ function _scan_panel(panel::Panel)
                 _check_y_valid(y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
                 push!(xvalues, x)
                 push!(axis_values, y)
+                if series.yside === :right
+                    has_right_data = true
+                else
+                    has_left_data = true
+                end
             end
         elseif series isa Bar
             axis_values = series.yside === :right ? yright_values : yleft_values
-            series.yside === :right && (has_right_axis = true)
             positions = [_convert_x(value, xcontext) for value in series.x]
             half_width = _bar_half_width(positions, series.width)
             for bar_ix in eachindex(positions)
@@ -74,12 +78,21 @@ function _scan_panel(panel::Panel)
                 end
                 push!(axis_values, pos_total)
                 push!(axis_values, neg_total)
+                if series.yside === :right
+                    has_right_data = true
+                else
+                    has_left_data = true
+                end
             end
         elseif series isa HLine
             axis_values = series.yside === :right ? yright_values : yleft_values
-            series.yside === :right && (has_right_axis = true)
             _check_y_valid(series.y, series.yside === :right ? panel.yaxis_right : panel.yaxis_left)
             push!(axis_values, series.y)
+            if series.yside === :right
+                has_right_data = true
+            else
+                has_left_data = true
+            end
         elseif series isa VLine
             x = _convert_x(series.x, xcontext)
             isfinite(x) && push!(xvalues, x)
@@ -89,7 +102,14 @@ function _scan_panel(panel::Panel)
     xlimits = _effective_xlimits(panel.xaxis, xvalues, xcontext; pad_fraction=_x_pad_fraction(panel))
     yleft_limits = _effective_limits(panel.yaxis_left, yleft_values; pad_fraction=panel.yaxis_left.scale === :log10 ? 0.0 : 0.05)
     yright_limits = _effective_limits(panel.yaxis_right, yright_values; pad_fraction=panel.yaxis_right.scale === :log10 ? 0.0 : 0.05)
-    (xcontext=xcontext, xlimits=xlimits, yleft_limits=yleft_limits, yright_limits=yright_limits, has_right_axis=has_right_axis)
+    (
+        xcontext=xcontext,
+        xlimits=xlimits,
+        yleft_limits=yleft_limits,
+        yright_limits=yright_limits,
+        has_left_data=has_left_data,
+        has_right_data=has_right_data,
+    )
 end
 
 function _combine_shared_x(scans)
@@ -112,10 +132,21 @@ function _combine_shared_x(scans)
 end
 
 function _combine_shared_y(scans, placements, side::Symbol)
-    panel = placements[1].panel
+    contributor_ixs = Int[]
+    for ix in eachindex(scans, placements)
+        scan = scans[ix]
+        placement = placements[ix]
+        axis = side === :left ? placement.panel.yaxis_left : placement.panel.yaxis_right
+        has_data = side === :left ? scan.has_left_data : scan.has_right_data
+        if has_data || !isnothing(axis.limits)
+            push!(contributor_ixs, ix)
+        end
+    end
+    isempty(contributor_ixs) && return nothing
+    panel = placements[first(contributor_ixs)].panel
     scale = side === :left ? panel.yaxis_left.scale : panel.yaxis_right.scale
     limits = _combine_limits(
-        side === :left ? (scan.yleft_limits for scan in scans) : (scan.yright_limits for scan in scans);
+        side === :left ? (scans[ix].yleft_limits for ix in contributor_ixs) : (scans[ix].yright_limits for ix in contributor_ixs);
         scale,
     )
     limits
@@ -222,7 +253,14 @@ end
 
 function _format_y_ticks(ticks::Vector{Float64}, scale::Symbol)
     if scale === :log10
-        return ["1e$(round(Int, log10(tick)))" for tick in ticks]
+        fallback_step = if length(ticks) >= 2
+            minimum(abs.(diff(sort(ticks))))
+        elseif isempty(ticks)
+            1.0
+        else
+            max(abs(only(ticks)) * 0.1, eps())
+        end
+        return [_format_log_tick(tick, fallback_step) for tick in ticks]
     end
     step = length(ticks) >= 2 ? abs(ticks[2] - ticks[1]) : 1.0
     _format_number.(ticks, Ref(step))
@@ -304,9 +342,13 @@ function _convert_x(value, xcontext::XContext)::Float64
     if xcontext.kind == :numeric
         return _finite_y(value)
     elseif xcontext.kind == :date
-        return Float64(Dates.datetime2epochms(DateTime(value)))
+        datetime = _to_datetime_value(value)
+        isnothing(datetime) && return NaN
+        return Float64(Dates.datetime2epochms(datetime))
     elseif xcontext.kind == :datetime
-        return Float64(Dates.datetime2epochms(value))
+        datetime = _to_datetime_value(value)
+        isnothing(datetime) && return NaN
+        return Float64(Dates.datetime2epochms(datetime))
     elseif xcontext.kind == :zoned
         return Float64(Dates.datetime2epochms(DateTime(astimezone(value, UTC_TZ))))
     elseif xcontext.kind == :categorical
@@ -314,6 +356,10 @@ function _convert_x(value, xcontext::XContext)::Float64
     end
     NaN
 end
+
+_to_datetime_value(value::DateTime) = value
+_to_datetime_value(value::Date) = DateTime(value)
+_to_datetime_value(::Any) = nothing
 
 function _finite_y(value)::Float64
     ismissing(value) && return NaN
@@ -336,14 +382,27 @@ function _series_point(
     subwidth::Int,
     subheight::Int,
 )
+    point = _series_subpoint(xcontext, xaxis, yaxis, x_raw, y_raw, subwidth, subheight)
+    isnothing(point) && return nothing
+    _point_in_bounds(point, subwidth, subheight) || return nothing
+    round(Int, point[1]), round(Int, point[2])
+end
+
+function _series_subpoint(
+    xcontext::XContext,
+    xaxis::AxisInfo,
+    yaxis::AxisInfo,
+    x_raw,
+    y_raw,
+    subwidth::Int,
+    subheight::Int,
+)
     x = _convert_x(x_raw, xcontext)
     y = _finite_y(y_raw)
     isfinite(x) || return nothing
     isfinite(y) || return nothing
-    subx = _value_to_subx(x, xaxis, subwidth)
-    suby = _value_to_suby(y, yaxis, subheight)
-    isnothing(subx) && return nothing
-    isnothing(suby) && return nothing
+    subx = _value_to_subx_unclipped(x, xaxis, subwidth)
+    suby = _value_to_suby_unclipped(y, yaxis, subheight)
     subx, suby
 end
 
@@ -357,6 +416,18 @@ function _value_to_suby(y::Float64, axis::AxisInfo, subheight::Int)
     norm = _normalize_value(y, axis)
     0.0 <= norm <= 1.0 || return nothing
     clamp(round(Int, (1.0 - norm) * (subheight - 1)), 0, subheight - 1)
+end
+
+function _value_to_subx_unclipped(x::Float64, axis::AxisInfo, subwidth::Int)::Float64
+    _normalize_value(x, axis) * (subwidth - 1)
+end
+
+function _value_to_suby_unclipped(y::Float64, axis::AxisInfo, subheight::Int)::Float64
+    (1.0 - _normalize_value(y, axis)) * (subheight - 1)
+end
+
+function _point_in_bounds(point::Tuple{Float64,Float64}, subwidth::Int, subheight::Int)::Bool
+    0.0 <= point[1] <= subwidth - 1 && 0.0 <= point[2] <= subheight - 1
 end
 
 function _normalize_value(value::Float64, axis::AxisInfo)::Float64
@@ -412,8 +483,36 @@ function _log_ticks(lo::Float64, hi::Float64, approx::Int)::Vector{Float64}
     if length(ticks) <= approx
         return ticks
     end
-    step = ceil(Int, length(ticks) / approx)
-    ticks[1:step:end]
+    ticks[_thin_ticks_preserve_ends(length(ticks), approx)]
+end
+
+function _thin_ticks_preserve_ends(count::Int, approx::Int)::Vector{Int}
+    keep = clamp(approx, 1, count)
+    keep == count && return collect(1:count)
+    keep == 1 && return [1]
+
+    idxs = unique(clamp.(round.(Int, range(1, count; length=keep)), 1, count))
+    idxs[1] = 1
+    idxs[end] = count
+    sort!(idxs)
+    if length(idxs) < keep
+        for candidate in 2:(count - 1)
+            candidate in idxs && continue
+            push!(idxs, candidate)
+            length(idxs) == keep && break
+        end
+        sort!(idxs)
+    end
+    idxs
+end
+
+function _format_log_tick(tick::Float64, fallback_step::Float64)::String
+    exponent = round(Int, log10(tick))
+    decade = 10.0 ^ exponent
+    if isapprox(tick, decade; rtol=1.0e-10, atol=0.0)
+        return "1e$(exponent)"
+    end
+    _format_number(tick, fallback_step)
 end
 
 function _format_number(value::Float64, step::Float64)::String
@@ -426,7 +525,11 @@ function _format_number(value::Float64, step::Float64)::String
     end
     decimals = clamp(Int(ceil(-log10(max(step, eps())))) + 1, 0, 6)
     formatted = @sprintf("%.*f", decimals, value)
-    replace(formatted, r"\.?0+$" => "")
+    if occursin('.', formatted)
+        formatted = replace(formatted, r"0+$" => "")
+        formatted = replace(formatted, r"\.$" => "")
+    end
+    formatted
 end
 
 function _thin_positions(cols::Vector{Int}, labels::Vector{String}, width::Int)::Vector{Bool}

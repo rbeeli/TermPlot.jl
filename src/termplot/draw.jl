@@ -46,25 +46,26 @@ function _draw_line_series!(
     subheight = plot_height * 4
     prev = nothing
     for (x_raw, y_raw) in zip(series.x, series.y)
-        point = _series_point(xcontext, prepared.xaxis, yaxis, x_raw, y_raw, subwidth, subheight)
+        point = _series_subpoint(xcontext, prepared.xaxis, yaxis, x_raw, y_raw, subwidth, subheight)
         if isnothing(point)
             prev = nothing
             continue
         end
+        visible_point = _point_in_bounds(point, subwidth, subheight) ? (round(Int, point[1]), round(Int, point[2])) : nothing
         if !isnothing(prev)
             _draw_line_transition!(canvas, prev, point, series.step, subwidth, subheight, color)
-        else
-            _set_subpixel!(canvas, point[1], point[2], color)
+        elseif !isnothing(visible_point)
+            _set_subpixel!(canvas, visible_point[1], visible_point[2], color)
         end
-        !isnothing(series.marker) && _draw_series_marker!(canvas, point, series.marker, plot_width, plot_height, color)
+        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color)
         prev = point
     end
 end
 
 function _draw_line_transition!(
     canvas::PlotCanvas,
-    prev::Tuple{Int,Int},
-    point::Tuple{Int,Int},
+    prev::Tuple{Float64,Float64},
+    point::Tuple{Float64,Float64},
     step::Symbol,
     subwidth::Int,
     subheight::Int,
@@ -91,7 +92,7 @@ function _draw_line_transition!(
     nothing
 end
 
-function _line_segments(prev::Tuple{Int,Int}, point::Tuple{Int,Int}, step::Symbol)
+function _line_segments(prev::Tuple{<:Real,<:Real}, point::Tuple{<:Real,<:Real}, step::Symbol)
     x0 = Float64(prev[1])
     y0 = Float64(prev[2])
     x1 = Float64(point[1])

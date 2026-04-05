@@ -53,6 +53,19 @@ end
     @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; step=:bad)
 end
 
+@testitem "line clipping keeps segments that enter the visible frame" setup = [TermPlotSetup] begin
+    fig = Figure(; width=40, height=12, legend=false)
+    panel!(fig; xlabel="x", ylabel="y")
+    line!(fig, [0.0, 2.0], [0.0, 2.0]; color=:cyan)
+    xlims!(fig, 1.0, 2.0)
+    ylims!(fig, 0.0, 2.0)
+
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    braille_lines = filter(line -> any(ch -> UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff, line), lines)
+
+    @test length(braille_lines) >= 2
+end
+
 @testitem "line markers render and validate marker inputs" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel!(fig; title="Markers", xlabel="x", ylabel="y")
@@ -93,6 +106,22 @@ end
         dateformat"yyyy-mm-dd HH:MM",
     )
     @test zlabels == ["2024-01-01 12:00"]
+end
+
+@testitem "mixed Date and DateTime x values promote to datetime and render" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=16)
+    panel = panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd HH:MM")
+    line!(fig, Any[Date(2024, 1, 1), DateTime(2024, 1, 2, 12)], [1.0, 2.0]; label="Mixed", color=:cyan)
+
+    ctx = TermPlot._infer_xcontext(panel)
+    converted_date = TermPlot._convert_x(Date(2024, 1, 1), ctx)
+    converted_datetime = TermPlot._convert_x(DateTime(2024, 1, 2, 12), ctx)
+    text = render(fig)
+
+    @test ctx.kind == :datetime
+    @test converted_date == Float64(Dates.datetime2epochms(DateTime(2024, 1, 1)))
+    @test converted_datetime == Float64(Dates.datetime2epochms(DateTime(2024, 1, 2, 12)))
+    @test occursin("Mixed", text)
 end
 
 @testitem "stacked categorical bars render" setup = [TermPlotSetup] begin
@@ -225,6 +254,25 @@ end
     @test occursin("◆ R", text)
 end
 
+@testitem "linked y ignores empty-side default limits from other panels" setup = [TermPlotSetup] begin
+    fig = Figure(GridLayout(1, 2); width=90, height=18, linky=true, legend=false)
+    left = panel!(fig, 1, 1; xlabel="x", ylabel="Left")
+    right = panel!(fig, 1, 2; xlabel="x", ylabel_right="Right")
+
+    line!(left, 1:3, [100.0, 150.0, 200.0]; color=:cyan)
+    line!(right, 1:3, [5.0, 6.0, 7.0]; color=:yellow, yside=:right)
+
+    scan_left = TermPlot._scan_panel(left)
+    scan_right = TermPlot._scan_panel(right)
+    shared_left = TermPlot._combine_shared_y([scan_left, scan_right], fig.placements, :left)
+    shared_right = TermPlot._combine_shared_y([scan_left, scan_right], fig.placements, :right)
+
+    @test scan_left.has_left_data
+    @test !scan_right.has_left_data
+    @test shared_left == scan_left.yleft_limits
+    @test shared_right == scan_right.yright_limits
+end
+
 @testitem "log scale validation" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; xlabel="x", ylabel="y")
@@ -237,6 +285,13 @@ end
     yscale!(bad, :log10)
     line!(bad, 1:3, [1.0, -2.0, 3.0]; label="bad")
     @test_throws ArgumentError render(bad)
+end
+
+@testitem "log tick thinning preserves end decades and labels distinguish non-decades" setup = [TermPlotSetup] begin
+    @test TermPlot._log_ticks(1.0, 1000.0, 2) == [1.0, 1000.0]
+    @test TermPlot._format_y_ticks([1.0, 1000.0], :log10) == ["1e0", "1e3"]
+    @test TermPlot._format_y_ticks([200.0, 300.0], :log10) == ["200", "300"]
+    @test TermPlot._format_number(200.0, 100.0) == "200"
 end
 
 @testitem "grid layout render supports spans and overlap checks" setup = [TermPlotSetup] begin
