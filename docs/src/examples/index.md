@@ -5,7 +5,7 @@ Each example page renders the actual ANSI terminal chart during the docs build, 
 
 Plot primitives:
 
-- [Line Charts](basic.md)
+- [Line Charts](line.md)
 - [Bar Charts](bars.md)
 - [Scatter Plots](scatter.md)
 - [Reference Lines](reference_lines.md)

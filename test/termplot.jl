@@ -26,6 +26,47 @@ end
     @test any(ch -> ch == '⠁' || ch == '⣀' || ch == '⠤' || (UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff), text)
 end
 
+@testitem "step line modes expand segments as expected" setup = [TermPlotSetup] begin
+    @test TermPlot._line_segments((0, 0), (4, 4), :linear) == [(0.0, 0.0, 4.0, 4.0)]
+    @test TermPlot._line_segments((0, 0), (4, 4), :post) == [(0.0, 0.0, 4.0, 0.0), (4.0, 0.0, 4.0, 4.0)]
+    @test TermPlot._line_segments((0, 0), (4, 4), :pre) == [(0.0, 0.0, 0.0, 4.0), (0.0, 4.0, 4.0, 4.0)]
+    @test TermPlot._line_segments((0, 0), (4, 4), :mid) == [(0.0, 0.0, 2.0, 0.0), (2.0, 0.0, 2.0, 4.0), (2.0, 4.0, 4.0, 4.0)]
+end
+
+@testitem "step line API validates and renders" setup = [TermPlotSetup] begin
+    fig = Figure(; width=84, height=18)
+    panel!(fig; title="Steps", xlabel="Bucket", ylabel="Exposure")
+    x = 1:6
+    y = [0.2, 0.5, 0.1, 0.7, 0.6, 0.9]
+    line!(fig, x, y; label="Post", color=:cyan, step=:post)
+    line!(fig, x, y .- 0.1; label="Mid", color=:yellow, step="mid")
+    line!(fig, x, y .- 0.2; label="Pre", color=:magenta, step=:pre)
+
+    text = render(fig)
+
+    @test occursin("Steps", text)
+    @test occursin("[-] Post", text)
+    @test occursin("[-] Mid", text)
+    @test occursin("[-] Pre", text)
+    @test_throws ArgumentError line!(Figure(), [1, 2], [1, 2]; step=:bad)
+end
+
+@testitem "line markers render and validate marker inputs" setup = [TermPlotSetup] begin
+    fig = Figure(; width=84, height=18)
+    panel!(fig; title="Markers", xlabel="x", ylabel="y")
+    x = 1:5
+    line!(fig, x, [1.0, 2.0, 1.5, 2.5, 2.0]; label="Named", color=:cyan, marker=:diamond)
+    line!(fig, x, [0.6, 1.2, 1.0, 1.8, 1.4]; label="Custom", color=:yellow, marker='▲')
+
+    text = render(fig)
+
+    @test occursin("◆─ Named", text)
+    @test occursin("▲─ Custom", text)
+    @test occursin("◆", text)
+    @test occursin("▲", text)
+    @test_throws ArgumentError line!(Figure(), [1, 2], [1, 2]; marker="not a marker")
+end
+
 @testitem "datetime formatting" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=16)
     panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")

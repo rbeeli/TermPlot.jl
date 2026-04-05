@@ -29,6 +29,8 @@ struct Line{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     label::String
     color::Union{Nothing,Symbol}
     yside::Symbol
+    step::Symbol
+    marker::Union{Nothing,Char}
 end
 
 struct Scatter{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
@@ -166,14 +168,21 @@ normalize_color(::Nothing) = nothing
 normalize_color(color::Symbol) = color === :grey ? :gray : color
 normalize_color(color::AbstractString) = normalize_color(Symbol(lowercase(String(color))))
 
+normalize_marker(::Nothing) = nothing
+normalize_marker(marker::Char)::Char = marker
+normalize_marker(marker::Symbol)::Char = normalize_marker(String(marker))
+
 function normalize_marker(marker::AbstractString)::Char
     marker_lc = lowercase(String(marker))
+    marker_lc == "dot" && return '•'
     marker_lc == "hd" && return '◆'
     marker_lc == "diamond" && return '◆'
     marker_lc == "cross" && return 'x'
     marker_lc == "square" && return '■'
     marker_lc == "circle" && return 'o'
-    return '•'
+    chars = collect(String(marker))
+    length(chars) == 1 && return chars[1]
+    throw(ArgumentError("marker must be a predefined name or a single character"))
 end
 
 yside_symbol(yside::Symbol) = yside
@@ -185,9 +194,19 @@ function Line(
     label::AbstractString="",
     color=nothing,
     yside::Union{Symbol,Integer}=:left,
+    step::Union{Symbol,AbstractString}=:linear,
+    marker::Union{Nothing,Symbol,AbstractString,Char}=nothing,
 )
     length(x) == length(y) || throw(ArgumentError("line x/y lengths must match"))
-    Line(x, y, String(label), normalize_color(color), yside_symbol(yside))
+    Line(
+        x,
+        y,
+        String(label),
+        normalize_color(color),
+        yside_symbol(yside),
+        _normalize_line_step(step),
+        normalize_marker(marker),
+    )
 end
 
 function Scatter(
@@ -196,7 +215,7 @@ function Scatter(
     label::AbstractString="",
     color=nothing,
     yside::Union{Symbol,Integer}=:left,
-    marker::AbstractString="dot",
+    marker::Union{Symbol,AbstractString,Char}="dot",
 )
     length(x) == length(y) || throw(ArgumentError("scatter x/y lengths must match"))
     Scatter(x, y, String(label), normalize_color(color), yside_symbol(yside), normalize_marker(marker))
@@ -268,6 +287,13 @@ function _validate_scale(scale::Symbol, axis_kind::Symbol)
     allowed = axis_kind === :y ? (:linear, :log10) : (:linear,)
     scale in allowed || throw(ArgumentError("unsupported $(axis_kind)-axis scale $(scale)"))
 end
+
+function _normalize_line_step(step::Symbol)::Symbol
+    step in (:linear, :pre, :mid, :post) || throw(ArgumentError("unsupported line step mode $(step)"))
+    step
+end
+
+_normalize_line_step(step::AbstractString) = _normalize_line_step(Symbol(lowercase(String(step))))
 
 function _braille_dot(dx::Int, dy::Int)::UInt8
     if dx == 0

@@ -51,22 +51,83 @@ function _draw_line_series!(
             continue
         end
         if !isnothing(prev)
-            clipped = _clip_line(
-                Float64(prev[1]),
-                Float64(prev[2]),
-                Float64(point[1]),
-                Float64(point[2]),
-                0.0,
-                Float64(subwidth - 1),
-                0.0,
-                Float64(subheight - 1),
-            )
-            !isnothing(clipped) && _draw_segment!(canvas, clipped[1], clipped[2], clipped[3], clipped[4], color)
+            _draw_line_transition!(canvas, prev, point, series.step, subwidth, subheight, color)
         else
             _set_subpixel!(canvas, point[1], point[2], color)
         end
+        !isnothing(series.marker) && _draw_series_marker!(canvas, point, series.marker, plot_width, plot_height, color)
         prev = point
     end
+end
+
+function _draw_line_transition!(
+    canvas::PlotCanvas,
+    prev::Tuple{Int,Int},
+    point::Tuple{Int,Int},
+    step::Symbol,
+    subwidth::Int,
+    subheight::Int,
+    color::Symbol,
+)
+    x0 = Float64(prev[1])
+    y0 = Float64(prev[2])
+    x1 = Float64(point[1])
+    y1 = Float64(point[2])
+    if step === :linear
+        _draw_clipped_segment!(canvas, x0, y0, x1, y1, subwidth, subheight, color)
+    elseif step === :post
+        _draw_clipped_segment!(canvas, x0, y0, x1, y0, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x1, y0, x1, y1, subwidth, subheight, color)
+    elseif step === :pre
+        _draw_clipped_segment!(canvas, x0, y0, x0, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x0, y1, x1, y1, subwidth, subheight, color)
+    else
+        xmid = (x0 + x1) / 2
+        _draw_clipped_segment!(canvas, x0, y0, xmid, y0, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, xmid, y0, xmid, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, xmid, y1, x1, y1, subwidth, subheight, color)
+    end
+    nothing
+end
+
+function _line_segments(prev::Tuple{Int,Int}, point::Tuple{Int,Int}, step::Symbol)
+    x0 = Float64(prev[1])
+    y0 = Float64(prev[2])
+    x1 = Float64(point[1])
+    y1 = Float64(point[2])
+    if step === :linear
+        return [(x0, y0, x1, y1)]
+    elseif step === :post
+        return [(x0, y0, x1, y0), (x1, y0, x1, y1)]
+    elseif step === :pre
+        return [(x0, y0, x0, y1), (x0, y1, x1, y1)]
+    end
+    xmid = (x0 + x1) / 2
+    [(x0, y0, xmid, y0), (xmid, y0, xmid, y1), (xmid, y1, x1, y1)]
+end
+
+function _draw_clipped_segment!(
+    canvas::PlotCanvas,
+    x0::Float64,
+    y0::Float64,
+    x1::Float64,
+    y1::Float64,
+    subwidth::Int,
+    subheight::Int,
+    color::Symbol,
+)
+    clipped = _clip_line(
+        x0,
+        y0,
+        x1,
+        y1,
+        0.0,
+        Float64(subwidth - 1),
+        0.0,
+        Float64(subheight - 1),
+    )
+    !isnothing(clipped) && _draw_segment!(canvas, clipped[1], clipped[2], clipped[3], clipped[4], color)
+    nothing
 end
 
 function _draw_scatter_series!(
@@ -82,11 +143,23 @@ function _draw_scatter_series!(
     for (x_raw, y_raw) in zip(series.x, series.y)
         point = _series_point(xcontext, prepared.xaxis, yaxis, x_raw, y_raw, plot_width * 2, plot_height * 4)
         isnothing(point) && continue
-        cell_col = clamp(fld(point[1], 2) + 1, 1, plot_width)
-        cell_row = clamp(fld(point[2], 4) + 1, 1, plot_height)
-        canvas.overlays[cell_row, cell_col] = series.marker
-        canvas.overlay_colors[cell_row, cell_col] = color
+        _draw_series_marker!(canvas, point, series.marker, plot_width, plot_height, color)
     end
+end
+
+function _draw_series_marker!(
+    canvas::PlotCanvas,
+    point::Tuple{Int,Int},
+    marker::Char,
+    plot_width::Int,
+    plot_height::Int,
+    color::Symbol,
+)
+    cell_col = clamp(fld(point[1], 2) + 1, 1, plot_width)
+    cell_row = clamp(fld(point[2], 4) + 1, 1, plot_height)
+    canvas.overlays[cell_row, cell_col] = marker
+    canvas.overlay_colors[cell_row, cell_col] = color
+    nothing
 end
 
 function _draw_bar_series!(
