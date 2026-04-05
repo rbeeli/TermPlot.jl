@@ -15,7 +15,7 @@ docs-serve:
     if [ ! -f docs/build/1/index.html ]; then
         just docs-build
     fi
-    python3 -m http.server 8000 --directory docs/build/1 >/tmp/termplot-docs-server.log 2>&1 &
+    docs/node_modules/.bin/vitepress preview docs/build/.documenter --host 127.0.0.1 --port 8000 >/tmp/termplot-docs-server.log 2>&1 &
     server_pid=$!
     trap cleanup EXIT
     trap 'cleanup; exit 0' INT TERM
