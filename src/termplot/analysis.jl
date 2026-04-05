@@ -86,7 +86,7 @@ function _scan_panel(panel::Panel)
         end
     end
 
-    xlimits = _effective_limits(panel.xaxis, xvalues; pad_fraction=_x_pad_fraction(panel))
+    xlimits = _effective_xlimits(panel.xaxis, xvalues, xcontext; pad_fraction=_x_pad_fraction(panel))
     yleft_limits = _effective_limits(panel.yaxis_left, yleft_values; pad_fraction=panel.yaxis_left.scale === :log10 ? 0.0 : 0.05)
     yright_limits = _effective_limits(panel.yaxis_right, yright_values; pad_fraction=panel.yaxis_right.scale === :log10 ? 0.0 : 0.05)
     (xcontext=xcontext, xlimits=xlimits, yleft_limits=yleft_limits, yright_limits=yright_limits, has_right_axis=has_right_axis)
@@ -148,6 +148,22 @@ function _effective_limits(axis::Axis, values::Vector{Float64}; pad_fraction::Fl
     end
     span = hi - lo
     return lo - span * pad_fraction, hi + span * pad_fraction
+end
+
+function _effective_xlimits(
+    axis::Axis,
+    values::Vector{Float64},
+    xcontext::XContext;
+    pad_fraction::Float64=0.05,
+)
+    if !isnothing(axis.limits)
+        lo = _convert_x(axis.limits[1], xcontext)
+        hi = _convert_x(axis.limits[2], xcontext)
+        isfinite(lo) || throw(ArgumentError("x-axis lower limit must be finite"))
+        isfinite(hi) || throw(ArgumentError("x-axis upper limit must be finite"))
+        return _expand_degenerate_limits((min(lo, hi), max(lo, hi)); scale=axis.scale)
+    end
+    _effective_limits(axis, values; pad_fraction)
 end
 
 function _x_pad_fraction(panel::Panel)::Float64

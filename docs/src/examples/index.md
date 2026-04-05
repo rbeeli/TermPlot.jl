@@ -14,7 +14,7 @@ Plot primitives:
 
 Layout and axis behavior:
 
-- [Dual Axes](dual_axes.md)
-- [Linked Layouts](linked_layouts.md)
+- [Axes](axes.md)
+- [Layouts](layouts.md)
 
 Use `display(fig)` in the REPL for the normal interactive workflow.

@@ -28,8 +28,8 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 - horizontal and vertical guide lines
 - `Date`, `DateTime`, and `ZonedDateTime` x-axes
 - manual axis limits
-- dual y-axes
-- linked multi-panel layouts
+- flexible axis options
+- multi-panel layouts
 - rendering to any `IO`
 - graceful handling of missing and non-finite data
 

@@ -31,6 +31,7 @@ end
     panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")
     x = [Date(2024, 1, 1), Date(2024, 1, 3)]
     line!(fig, x, [1.0, 2.0]; label="L")
+    xlims!(fig, Date(2024, 1, 1), Date(2024, 1, 3))
     ctx = TermPlot._infer_xcontext(fig.panels[1, 1])
     labels = TermPlot._format_x_ticks(
         [Float64(Dates.datetime2epochms(DateTime(Date(2024, 1, 1))))],
@@ -38,6 +39,7 @@ end
         fig.panels[1, 1].xaxis.date_format,
     )
     @test labels == ["2024-01-01"]
+    @test occursin("2024-01-01", render(fig))
 
     zctx = TermPlot.XContext(:zoned, TimeZone("America/New_York"), String[], Dict{String,Float64}())
     zlabels = TermPlot._format_x_ticks(
