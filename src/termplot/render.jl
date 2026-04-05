@@ -6,8 +6,8 @@ const FRAME_TOP_SEAM = '┬'
 const FRAME_BOTTOM_SEAM = '┴'
 const FRAME_HORIZONTAL = '─'
 const FRAME_VERTICAL = '│'
-const FRAME_LEFT_TICK = '├'
-const FRAME_RIGHT_TICK = '┤'
+const FRAME_LEFT_OUTER_TICK = '┤'
+const FRAME_RIGHT_OUTER_TICK = '├'
 const FRAME_BOTTOM_TICK = '┬'
 const ANSI_BOLD = "\e[1m"
 const ANSI_UNBOLD = "\e[22m"
@@ -382,8 +382,8 @@ function _render_panel_block(
         if chrome.show_right_axis && !isempty(tick_rows_right[row])
             right_label = rpad(_truncate_text(tick_rows_right[row], right_width), right_width)
         end
-        left_border = chrome.show_left_frame ? (isempty(tick_rows_left[row]) || !chrome.show_left_axis ? FRAME_VERTICAL : FRAME_LEFT_TICK) : '\0'
-        right_border = chrome.show_right_frame ? (isempty(tick_rows_right[row]) || !chrome.show_right_axis ? FRAME_VERTICAL : FRAME_RIGHT_TICK) : '\0'
+        left_border = chrome.show_left_frame ? (isempty(tick_rows_left[row]) || !chrome.show_left_axis ? FRAME_VERTICAL : FRAME_LEFT_OUTER_TICK) : '\0'
+        right_border = chrome.show_right_frame ? (isempty(tick_rows_right[row]) || !chrome.show_right_axis ? FRAME_VERTICAL : FRAME_RIGHT_OUTER_TICK) : '\0'
         push!(
             out,
             string(_left_row_prefix(left_label, left_border, chrome), _plot_row_string(canvas, row, color_enabled), _right_row_suffix(right_border, right_label, chrome)),

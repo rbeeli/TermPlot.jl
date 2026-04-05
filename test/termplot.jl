@@ -275,6 +275,23 @@ end
     @test occursin("◆ R", text)
 end
 
+@testitem "y axis tick junctions point outside the plot area" setup = [TermPlotSetup] begin
+    fig = Figure(; width=84, height=18, legend=false)
+    panel!(fig; xlabel="Date", ylabel="Left", ylabel_right="Right", x_date_format=dateformat"yyyy-mm-dd")
+    x = [Date(2024, 1, 1) + Day(i) for i in 0:4]
+    line!(fig, x, [1, 2, 3, 4, 5]; color=:cyan)
+    line!(fig, x, [10, 11, 12, 13, 14]; color=:yellow, yside=:right)
+    ylims!(fig, 1, 5)
+    ylims!(fig, 10, 14; yside=:right)
+
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    tick_line = findfirst(line -> occursin(r"^\s*5\s+┤", line) && occursin(r"├\s+14\s*$", line), lines)
+
+    @test !isnothing(tick_line)
+    @test !occursin(r"^\s*5\s+├", lines[tick_line])
+    @test !occursin(r"┤\s+14\s*$", lines[tick_line])
+end
+
 @testitem "linked y ignores empty-side default limits from other panels" setup = [TermPlotSetup] begin
     fig = Figure(GridLayout(1, 2); width=90, height=18, linky=true, legend=false)
     left = panel!(fig, 1, 1; xlabel="x", ylabel="Left")
