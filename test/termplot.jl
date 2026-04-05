@@ -26,6 +26,21 @@ end
     @test any(ch -> ch == '⠁' || ch == '⣀' || ch == '⠤' || (UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff), text)
 end
 
+@testitem "unicode titles and labels truncate without string indexing errors" setup = [TermPlotSetup] begin
+    long = repeat("◆", 50)
+    fig = Figure(; width=41, height=14, title=long, legend=false)
+    panel!(fig; title=long, xlabel=long, ylabel="y")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; color=:cyan)
+
+    text = TermPlot._strip_ansi(render(fig))
+    lines = split(text, '\n')
+
+    @test textwidth(lines[1]) == 41
+    @test occursin("...", lines[1])
+    @test any(line -> occursin("...", line), lines)
+    @test all(textwidth(line) == 41 for line in lines)
+end
+
 @testitem "step line modes expand segments as expected" setup = [TermPlotSetup] begin
     @test TermPlot._line_segments((0, 0), (4, 4), :linear) == [(0.0, 0.0, 4.0, 4.0)]
     @test TermPlot._line_segments((0, 0), (4, 4), :post) == [(0.0, 0.0, 4.0, 0.0), (4.0, 0.0, 4.0, 4.0)]
@@ -647,6 +662,25 @@ end
         color_text = String(take!(color_buffer))
         @test occursin("\e[", color_text)
     end
+end
+
+@testitem "long legend items wrap within width and styled centering clips" setup = [TermPlotSetup] begin
+    fig = Figure(; width=40, height=16)
+    panel!(fig; xlabel="x", ylabel="y")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label=repeat("LongLabel", 8), color=:cyan)
+
+    text = withenv("NO_COLOR" => nothing) do
+        buffer = IOBuffer()
+        render!(IOContext(buffer, :color => true), fig)
+        String(take!(buffer))
+    end
+    lines = split(TermPlot._strip_ansi(text), '\n')
+    styled = string(TermPlot._ansi_text("[=]", :cyan), " ", repeat("LongLabel", 8))
+    centered = TermPlot._center_styled_text(styled, 40)
+
+    @test all(textwidth(line) == 40 for line in lines)
+    @test textwidth(TermPlot._strip_ansi(centered)) == 40
+    @test occursin("...", TermPlot._strip_ansi(centered))
 end
 
 @testitem "legend shares header lines with wrapped axis labels and titles can be bold" setup = [TermPlotSetup] begin

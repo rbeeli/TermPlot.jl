@@ -29,6 +29,12 @@ Base.@kwdef struct PanelChrome
     bottom_adjacent::Bool = false
 end
 
+struct LegendItem
+    symbol_plain::String
+    symbol_styled::String
+    label::String
+end
+
 function _render_lines(fig::Figure, io::IO)::Vector{String}
     color_enabled = _color_enabled(io)
     total_width = _resolve_terminal_width(io, fig.width)
@@ -265,7 +271,7 @@ function _has_adjacent_neighbor(
 end
 
 function _figure_legend_lines(prepared::Vector{PreparedPanel}, width::Int, color_enabled::Bool)::Vector{String}
-    items = Tuple{Int,String}[]
+    items = LegendItem[]
     for prepared_panel in prepared
         append!(items, _legend_items(prepared_panel))
     end
@@ -622,13 +628,22 @@ function _legend_lines(prepared::PreparedPanel, width::Int, color_enabled::Bool)
     _legend_lines(items, width, color_enabled)
 end
 
-function _legend_lines(items::Vector{Tuple{Int,String}}, width::Int, color_enabled::Bool)::Vector{String}
+function _legend_lines(items::Vector{LegendItem}, width::Int, color_enabled::Bool)::Vector{String}
     width <= 0 && return String[]
     isempty(items) && return String[]
     lines = String[]
     current_plain = 0
     current = IOBuffer()
-    for (plain_width, styled) in items
+    for item in items
+        item_lines = _legend_item_lines(item, width, color_enabled)
+        if length(item_lines) > 1
+            current_plain > 0 && push!(lines, _center_styled_text(String(take!(current)), width))
+            current_plain = 0
+            append!(lines, (_center_styled_text(line, width) for (_, line) in item_lines))
+            continue
+        end
+
+        plain_width, styled = only(item_lines)
         sep = current_plain == 0 ? 0 : 2
         if current_plain > 0 && current_plain + sep + plain_width > width
             push!(lines, _center_styled_text(String(take!(current)), width))
@@ -638,7 +653,7 @@ function _legend_lines(items::Vector{Tuple{Int,String}}, width::Int, color_enabl
             write(current, "  ")
             current_plain += 2
         end
-        write(current, color_enabled ? styled : _strip_ansi(styled))
+        write(current, styled)
         current_plain += plain_width
     end
     current_plain > 0 && push!(lines, _center_styled_text(String(take!(current)), width))
@@ -646,51 +661,69 @@ function _legend_lines(items::Vector{Tuple{Int,String}}, width::Int, color_enabl
 end
 
 function _legend_items(prepared::PreparedPanel)
-    items = Tuple{Int,String}[]
+    items = LegendItem[]
     auto_ix = 0
     for series in prepared.panel.series
         if series isa Line
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue
             symbol = isnothing(series.marker) ? "[-]" : string(series.marker, '─')
-            plain = "$(symbol) $(series.label)"
-            styled = string(_ansi_text(symbol, color), " ", series.label)
-            push!(items, (textwidth(plain), styled))
+            push!(items, LegendItem(symbol, _ansi_text(symbol, color), series.label))
         elseif series isa Stem
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue
             symbol = isnothing(series.marker) ? "[|]" : string(series.marker, '│')
-            plain = "$(symbol) $(series.label)"
-            styled = string(_ansi_text(symbol, color), " ", series.label)
-            push!(items, (textwidth(plain), styled))
+            push!(items, LegendItem(symbol, _ansi_text(symbol, color), series.label))
         elseif series isa Scatter
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue
             symbol = string(series.marker)
-            plain = "$(symbol) $(series.label)"
-            styled = string(_ansi_text(symbol, color), " ", series.label)
-            push!(items, (textwidth(plain), styled))
+            push!(items, LegendItem(symbol, _ansi_text(symbol, color), series.label))
         elseif series isa Bar
             for label_ix in eachindex(series.labels)
                 auto_ix += 1
                 label = series.labels[label_ix]
                 isempty(label) && continue
                 color = _resolve_series_color(series.colors[label_ix], auto_ix)
-                plain = "[#] $(label)"
-                styled = string(_ansi_text("[#]", color), " ", label)
-                push!(items, (textwidth(plain), styled))
+                push!(items, LegendItem("[#]", _ansi_text("[#]", color), label))
             end
         elseif series isa HLine || series isa VLine
             label = series.label
             isempty(label) && continue
             auto_ix += 1
             color = _resolve_series_color(series.color, auto_ix)
-            plain = "[=] $(label)"
-            styled = string(_ansi_text("[=]", color), " ", label)
-            push!(items, (textwidth(plain), styled))
+            push!(items, LegendItem("[=]", _ansi_text("[=]", color), label))
         end
     end
     items
+end
+
+function _legend_item_lines(item::LegendItem, width::Int, color_enabled::Bool)::Vector{Tuple{Int,String}}
+    width <= 0 && return Tuple{Int,String}[]
+    symbol = color_enabled ? item.symbol_styled : item.symbol_plain
+    plain = string(item.symbol_plain, " ", item.label)
+    textwidth(plain) <= width && return [(textwidth(plain), string(symbol, " ", item.label))]
+
+    symbol_width = textwidth(item.symbol_plain)
+    if symbol_width + 1 >= width
+        clipped = _truncate_text(plain, width)
+        return [(textwidth(clipped), clipped)]
+    end
+
+    first_width = width - symbol_width - 1
+    first_chunk, remainder = _split_textwidth_prefix(item.label, first_width)
+    if isempty(first_chunk)
+        clipped = _truncate_text(plain, width)
+        return [(textwidth(clipped), clipped)]
+    end
+
+    lines = Tuple{Int,String}[(textwidth(item.symbol_plain) + 1 + textwidth(first_chunk), string(symbol, " ", first_chunk))]
+    while !isempty(remainder)
+        chunk, remainder = _split_textwidth_prefix(remainder, width)
+        isempty(chunk) && break
+        push!(lines, (textwidth(chunk), chunk))
+    end
+    lines
 end
 
 function _top_border(left_width::Int, plot_width::Int, right_width::Int, chrome::PanelChrome)::String
@@ -799,6 +832,10 @@ end
 
 function _center_styled_text(text::AbstractString, width::Int)::String
     plain = _strip_ansi(text)
+    if textwidth(plain) > width
+        plain = _truncate_text(plain, width)
+        text = plain
+    end
     pad = max(width - textwidth(plain), 0)
     left = fld(pad, 2)
     right = pad - left
@@ -811,9 +848,33 @@ function _bold_text(text::AbstractString, enabled::Bool)::String
 end
 
 function _truncate_text(text::String, width::Int)::String
+    width <= 0 && return ""
     textwidth(text) <= width && return text
-    width <= 3 && return text[1:width]
-    text[1:max(width - 3, 1)] * "..."
+    width <= 3 && return _take_textwidth_prefix(text, width)
+    string(_take_textwidth_prefix(text, width - 3), "...")
+end
+
+function _split_textwidth_prefix(text::AbstractString, width::Int)::Tuple{String,String}
+    width <= 0 && return "", String(text)
+    prefix = IOBuffer()
+    remainder = IOBuffer()
+    used = 0
+    taking_prefix = true
+    for grapheme in Base.Unicode.graphemes(text)
+        grapheme_width = textwidth(grapheme)
+        if taking_prefix && used + grapheme_width <= width
+            write(prefix, grapheme)
+            used += grapheme_width
+        else
+            taking_prefix = false
+            write(remainder, grapheme)
+        end
+    end
+    String(take!(prefix)), String(take!(remainder))
+end
+
+function _take_textwidth_prefix(text::AbstractString, width::Int)::String
+    first(_split_textwidth_prefix(text, width))
 end
 
 function _ansi_text(text::AbstractString, color::Symbol)::String
