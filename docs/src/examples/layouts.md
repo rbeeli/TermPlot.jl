@@ -10,7 +10,7 @@ The charts below are generated during the docs build.
 using Dates
 using TermPlot
 
-fig = Figure(; title="Linked Layout Example", width=120, height=24, layout=(1, 2), linkx=true, linky=true);
+fig = Figure(; title="Linked Layout Example", width=110, height=24, layout=(1, 2), linkx=true, linky=true);
 
 panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"yyyy-mm-dd");
 panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"yyyy-mm-dd");
@@ -26,7 +26,7 @@ line!(fig.panels[1, 2], x2, [0.98, 1.00, 1.01, 1.04, 1.03, 1.05, 1.07, 1.09]; la
 using Dates
 using TermPlot
 
-fig = Figure(; title="Linked Layout Example", width=120, height=24, layout=(1, 2), linkx=true, linky=true)
+fig = Figure(; title="Linked Layout Example", width=110, height=24, layout=(1, 2), linkx=true, linky=true)
 
 panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"yyyy-mm-dd")
 panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"yyyy-mm-dd")
@@ -54,7 +54,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(; title="2x2 Layout Example", width=124, height=30, layout=(2, 2), linkx=true);
+fig = Figure(; title="2x2 Layout Example", width=116, height=30, layout=(2, 2), linkx=true);
 
 panel!(fig, 1, 1; title="Strategy", xlabel="Date", ylabel="Equity", x_date_format=dateformat"mm-dd");
 panel!(fig, 1, 2; title="Benchmark", xlabel="Date", ylabel="Equity", x_date_format=dateformat"mm-dd");
@@ -78,7 +78,7 @@ hline!(fig.panels[2, 2], 0.0; label="Zero", color=:gray);
 using Dates
 using TermPlot
 
-fig = Figure(; title="2x2 Layout Example", width=124, height=30, layout=(2, 2), linkx=true)
+fig = Figure(; title="2x2 Layout Example", width=116, height=30, layout=(2, 2), linkx=true)
 
 panel!(fig, 1, 1; title="Strategy", xlabel="Date", ylabel="Equity", x_date_format=dateformat"mm-dd")
 panel!(fig, 1, 2; title="Benchmark", xlabel="Date", ylabel="Equity", x_date_format=dateformat"mm-dd")

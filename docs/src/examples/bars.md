@@ -70,7 +70,7 @@ panel!(
 x = [Date(2024, 2, 1) + Day(i) for i in 0:11];
 volume = [14, 18, 21, 17, 24, 28, 19, 23, 31, 27, 22, 26];
 
-bar!(fig, x, volume; label="Volume", color=:blue, width=0.9);
+bar!(fig, x, volume; label="Volume", color=:blue, width=0.82);
 ylims!(fig, 0, 35);
 ```
 
@@ -90,7 +90,7 @@ panel!(
 x = [Date(2024, 2, 1) + Day(i) for i in 0:11]
 volume = [14, 18, 21, 17, 24, 28, 19, 23, 31, 27, 22, 26]
 
-bar!(fig, x, volume; label="Volume", color=:blue, width=0.9)
+bar!(fig, x, volume; label="Volume", color=:blue, width=0.82)
 ylims!(fig, 0, 35)
 
 display(fig)
