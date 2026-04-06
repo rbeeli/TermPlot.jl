@@ -367,19 +367,23 @@ end
         fill(UInt8(0), 1, 1),
         Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
         [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
+        fill(0, 1, 1),
         fill(UInt8(0), 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
         fill('\0', 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
         fill("", 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
     )
     canvas.mask_colors[1, 1] = nothing
 
-    TermPlot._set_subpixel!(canvas, 0, 0, :cyan)
-    TermPlot._set_subpixel!(canvas, 1, 0, :cyan)
-    TermPlot._set_subpixel!(canvas, 0, 1, :cyan)
-    TermPlot._set_subpixel!(canvas, 1, 3, :yellow)
+    TermPlot._set_subpixel!(canvas, 0, 0, :cyan, 1)
+    TermPlot._set_subpixel!(canvas, 1, 0, :cyan, 1)
+    TermPlot._set_subpixel!(canvas, 0, 1, :cyan, 1)
+    TermPlot._set_subpixel!(canvas, 1, 3, :yellow, 2)
 
     text = withenv("NO_COLOR" => nothing) do
         TermPlot._plot_row_string(canvas, 1, true)
@@ -394,19 +398,23 @@ end
         fill(UInt8(0), 1, 1),
         Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
         [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
+        fill(0, 1, 1),
         fill(UInt8(0), 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
         fill('\0', 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
         fill("", 1, 1),
         fill(nothing, 1, 1),
+        fill(0, 1, 1),
     )
     canvas.mask_colors[1, 1] = nothing
 
-    TermPlot._set_subpixel!(canvas, 0, 0, :cyan)
-    TermPlot._set_subpixel!(canvas, 1, 0, :cyan)
-    TermPlot._set_subpixel!(canvas, 0, 1, :yellow)
-    TermPlot._set_subpixel!(canvas, 1, 1, :yellow)
+    TermPlot._set_subpixel!(canvas, 0, 0, :cyan, 1)
+    TermPlot._set_subpixel!(canvas, 1, 0, :cyan, 1)
+    TermPlot._set_subpixel!(canvas, 0, 1, :yellow, 2)
+    TermPlot._set_subpixel!(canvas, 1, 1, :yellow, 2)
 
     text = withenv("NO_COLOR" => nothing) do
         TermPlot._plot_row_string(canvas, 1, true)
@@ -414,6 +422,38 @@ end
 
     @test occursin("\e[33m", text)
     @test !occursin("\e[36m", text)
+end
+
+@testitem "plot cell rendering follows series insertion order across layer types" setup = [TermPlotSetup] begin
+    function overlapping_cell(panel::Panel)
+        scan = TermPlot._scan_panel(panel)
+        prepared = TermPlot._prepare_panel(panel, scan, nothing, nothing, nothing)
+        plot_width = 20
+        plot_height = 8
+        canvas = TermPlot._render_plot_canvas(prepared, plot_width, plot_height)
+        point = TermPlot._series_point(prepared.xcontext, prepared.xaxis, prepared.yleft, 2.0, 2.0, plot_width * 2, plot_height * 4)
+        row = fld(point[2], 4) + 1
+        col = fld(point[1], 2) + 1
+        TermPlot._plot_cell(canvas, row, col)
+    end
+
+    line_above = Figure(; width=40, height=16)
+    panel!(line_above; xlabel="x", ylabel="y")
+    scatter!(line_above, [2.0], [2.0]; color=:yellow, marker=:diamond)
+    line!(line_above, [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]; color=:red)
+
+    text, color, _ = overlapping_cell(line_above.current)
+    @test text != "◆"
+    @test color === :red
+
+    marker_above = Figure(; width=40, height=16)
+    panel!(marker_above; xlabel="x", ylabel="y")
+    line!(marker_above, [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]; color=:red)
+    scatter!(marker_above, [2.0], [2.0]; color=:yellow, marker=:diamond)
+
+    text, color, _ = overlapping_cell(marker_above.current)
+    @test text == "◆"
+    @test color === :yellow
 end
 
 @testitem "scatter and vertical reference lines render" setup = [TermPlotSetup] begin

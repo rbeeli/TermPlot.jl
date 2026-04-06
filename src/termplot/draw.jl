@@ -2,34 +2,40 @@ function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_heig
     masks = fill(UInt8(0), plot_height, plot_width)
     mask_colors = fill(nothing, plot_height, plot_width)
     mask_color_layers = [Pair{Symbol,UInt8}[] for _ in 1:plot_height, _ in 1:plot_width]
+    mask_orders = fill(0, plot_height, plot_width)
     fills = fill(UInt8(0), plot_height, plot_width)
     fill_colors = fill(nothing, plot_height, plot_width)
+    fill_orders = fill(0, plot_height, plot_width)
     guides = fill('\0', plot_height, plot_width)
     guide_colors = fill(nothing, plot_height, plot_width)
+    guide_orders = fill(0, plot_height, plot_width)
     overlays = fill("", plot_height, plot_width)
     overlay_colors = fill(nothing, plot_height, plot_width)
-    canvas = PlotCanvas(masks, mask_colors, mask_color_layers, fills, fill_colors, guides, guide_colors, overlays, overlay_colors)
+    overlay_orders = fill(0, plot_height, plot_width)
+    canvas = PlotCanvas(masks, mask_colors, mask_color_layers, mask_orders, fills, fill_colors, fill_orders, guides, guide_colors, guide_orders, overlays, overlay_colors, overlay_orders)
 
     auto_ix = 0
+    draw_order = 0
     for series in prepared.panel.series
+        draw_order += 1
         if series isa Line
             color = _resolve_series_color(series.color, auto_ix += 1)
-            _draw_line_series!(canvas, prepared, series, plot_width, plot_height, color)
+            _draw_line_series!(canvas, prepared, series, plot_width, plot_height, color, draw_order)
         elseif series isa Stem
             color = _resolve_series_color(series.color, auto_ix += 1)
-            _draw_stem_series!(canvas, prepared, series, plot_width, plot_height, color)
+            _draw_stem_series!(canvas, prepared, series, plot_width, plot_height, color, draw_order)
         elseif series isa Scatter
             color = _resolve_series_color(series.color, auto_ix += 1)
-            _draw_scatter_series!(canvas, prepared, series, plot_width, plot_height, color)
+            _draw_scatter_series!(canvas, prepared, series, plot_width, plot_height, color, draw_order)
         elseif series isa Bar
-            _draw_bar_series!(canvas, prepared, series, plot_width, plot_height, auto_ix)
+            _draw_bar_series!(canvas, prepared, series, plot_width, plot_height, auto_ix, draw_order)
             auto_ix += length(series.labels)
         elseif series isa HLine
             color = _resolve_series_color(series.color, auto_ix += 1)
-            _draw_hline!(canvas, prepared, series, plot_width, plot_height, color)
+            _draw_hline!(canvas, prepared, series, plot_width, plot_height, color, draw_order)
         elseif series isa VLine
             color = _resolve_series_color(series.color, auto_ix += 1)
-            _draw_vline!(canvas, prepared, series, plot_width, plot_height, color)
+            _draw_vline!(canvas, prepared, series, plot_width, plot_height, color, draw_order)
         end
     end
     canvas
@@ -42,6 +48,7 @@ function _draw_line_series!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     xcontext = prepared.xcontext
     yaxis = series.yside === :right ? prepared.yright : prepared.yleft
@@ -56,11 +63,11 @@ function _draw_line_series!(
         end
         visible_point = _point_in_bounds(point, subwidth, subheight) ? (round(Int, point[1]), round(Int, point[2])) : nothing
         if !isnothing(prev)
-            _draw_line_transition!(canvas, prev, point, series.step, subwidth, subheight, color)
+            _draw_line_transition!(canvas, prev, point, series.step, subwidth, subheight, color, draw_order)
         elseif !isnothing(visible_point)
-            _set_subpixel!(canvas, visible_point[1], visible_point[2], color)
+            _set_subpixel!(canvas, visible_point[1], visible_point[2], color, draw_order)
         end
-        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color)
+        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color, draw_order)
         prev = point
     end
 end
@@ -72,6 +79,7 @@ function _draw_stem_series!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     xcontext = prepared.xcontext
     yaxis = series.yside === :right ? prepared.yright : prepared.yleft
@@ -84,9 +92,9 @@ function _draw_stem_series!(
         baseline_point = _series_subpoint(xcontext, prepared.xaxis, yaxis, x_raw, series.baseline, subwidth, subheight)
         isnothing(baseline_point) && continue
 
-        _draw_clipped_segment!(canvas, baseline_point[1], baseline_point[2], point[1], point[2], subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, baseline_point[1], baseline_point[2], point[1], point[2], subwidth, subheight, color, draw_order)
         visible_point = _point_in_bounds(point, subwidth, subheight) ? (round(Int, point[1]), round(Int, point[2])) : nothing
-        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color)
+        !isnothing(series.marker) && !isnothing(visible_point) && _draw_series_marker!(canvas, visible_point, series.marker, plot_width, plot_height, color, draw_order)
     end
 end
 
@@ -98,24 +106,25 @@ function _draw_line_transition!(
     subwidth::Int,
     subheight::Int,
     color::Symbol,
+    draw_order::Int,
 )
     x0 = Float64(prev[1])
     y0 = Float64(prev[2])
     x1 = Float64(point[1])
     y1 = Float64(point[2])
     if step === :linear
-        _draw_clipped_segment!(canvas, x0, y0, x1, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x0, y0, x1, y1, subwidth, subheight, color, draw_order)
     elseif step === :post
-        _draw_clipped_segment!(canvas, x0, y0, x1, y0, subwidth, subheight, color)
-        _draw_clipped_segment!(canvas, x1, y0, x1, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x0, y0, x1, y0, subwidth, subheight, color, draw_order)
+        _draw_clipped_segment!(canvas, x1, y0, x1, y1, subwidth, subheight, color, draw_order)
     elseif step === :pre
-        _draw_clipped_segment!(canvas, x0, y0, x0, y1, subwidth, subheight, color)
-        _draw_clipped_segment!(canvas, x0, y1, x1, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x0, y0, x0, y1, subwidth, subheight, color, draw_order)
+        _draw_clipped_segment!(canvas, x0, y1, x1, y1, subwidth, subheight, color, draw_order)
     else
         xmid = (x0 + x1) / 2
-        _draw_clipped_segment!(canvas, x0, y0, xmid, y0, subwidth, subheight, color)
-        _draw_clipped_segment!(canvas, xmid, y0, xmid, y1, subwidth, subheight, color)
-        _draw_clipped_segment!(canvas, xmid, y1, x1, y1, subwidth, subheight, color)
+        _draw_clipped_segment!(canvas, x0, y0, xmid, y0, subwidth, subheight, color, draw_order)
+        _draw_clipped_segment!(canvas, xmid, y0, xmid, y1, subwidth, subheight, color, draw_order)
+        _draw_clipped_segment!(canvas, xmid, y1, x1, y1, subwidth, subheight, color, draw_order)
     end
     nothing
 end
@@ -145,6 +154,7 @@ function _draw_clipped_segment!(
     subwidth::Int,
     subheight::Int,
     color::Symbol,
+    draw_order::Int,
 )
     clipped = _clip_line(
         x0,
@@ -156,7 +166,7 @@ function _draw_clipped_segment!(
         0.0,
         Float64(subheight - 1),
     )
-    !isnothing(clipped) && _draw_segment!(canvas, clipped[1], clipped[2], clipped[3], clipped[4], color)
+    !isnothing(clipped) && _draw_segment!(canvas, clipped[1], clipped[2], clipped[3], clipped[4], color, draw_order)
     nothing
 end
 
@@ -167,13 +177,14 @@ function _draw_scatter_series!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     xcontext = prepared.xcontext
     yaxis = series.yside === :right ? prepared.yright : prepared.yleft
     for (x_raw, y_raw) in zip(series.x, series.y)
         point = _series_point(xcontext, prepared.xaxis, yaxis, x_raw, y_raw, plot_width * 2, plot_height * 4)
         isnothing(point) && continue
-        _draw_series_marker!(canvas, point, series.marker, plot_width, plot_height, color)
+        _draw_series_marker!(canvas, point, series.marker, plot_width, plot_height, color, draw_order)
     end
 end
 
@@ -184,6 +195,7 @@ function _draw_series_marker!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     marker_text = _take_textwidth_prefix(string(marker), plot_width)
     isempty(marker_text) && return
@@ -194,9 +206,11 @@ function _draw_series_marker!(
     _clear_overlay_range!(canvas, cell_row, cell_col, marker_last_col)
     canvas.overlays[cell_row, cell_col] = marker_text
     canvas.overlay_colors[cell_row, cell_col] = color
+    canvas.overlay_orders[cell_row, cell_col] = draw_order
     for col in (cell_col + 1):marker_last_col
         canvas.overlays[cell_row, col] = ""
         canvas.overlay_colors[cell_row, col] = color
+        canvas.overlay_orders[cell_row, col] = draw_order
     end
     nothing
 end
@@ -208,6 +222,7 @@ function _draw_bar_series!(
     plot_width::Int,
     plot_height::Int,
     auto_ix_start::Int,
+    draw_order::Int,
 )
     xcontext = prepared.xcontext
     axis = series.yside === :right ? prepared.yright : prepared.yleft
@@ -236,6 +251,7 @@ function _draw_bar_series!(
                 plot_width,
                 plot_height,
                 color,
+                draw_order,
             )
             if y >= 0.0
                 pos_base += y
@@ -253,13 +269,14 @@ function _draw_hline!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     axis = series.yside === :right ? prepared.yright : prepared.yleft
     row = _value_to_suby(series.y, axis, plot_height * 4)
     isnothing(row) && return
     cell_row = clamp(fld(row, 4) + 1, 1, plot_height)
     for cell_col in 1:plot_width
-        _set_guide_cell!(canvas, cell_row, cell_col, :horizontal, color)
+        _set_guide_cell!(canvas, cell_row, cell_col, :horizontal, color, draw_order)
     end
 end
 
@@ -270,6 +287,7 @@ function _draw_vline!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     x = _convert_x(series.x, prepared.xcontext)
     isfinite(x) || return
@@ -277,7 +295,7 @@ function _draw_vline!(
     isnothing(col) && return
     cell_col = clamp(fld(col, 2) + 1, 1, plot_width)
     for cell_row in 1:plot_height
-        _set_guide_cell!(canvas, cell_row, cell_col, :vertical, color)
+        _set_guide_cell!(canvas, cell_row, cell_col, :vertical, color, draw_order)
     end
 end
 
@@ -292,6 +310,7 @@ function _fill_bar!(
     plot_width::Int,
     plot_height::Int,
     color::Symbol,
+    draw_order::Int,
 )
     xspan = _clipped_subinterval(x_lo, x_hi, xaxis, plot_width * 2, _value_to_subx)
     yspan = _clipped_subinterval(y_lo, y_hi, yaxis, plot_height * 4, _value_to_suby)
@@ -304,7 +323,7 @@ function _fill_bar!(
     ymax = clamp(max(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
     for suby in ymin:ymax
         for subx in xmin:xmax
-            _set_fill_subpixel!(canvas, subx, suby, color)
+            _set_fill_subpixel!(canvas, subx, suby, color, draw_order)
         end
     end
 end
@@ -349,16 +368,22 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
 end
 
 function _plot_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{String,Union{Nothing,Symbol},Int}
-    if !isnothing(canvas.overlay_colors[row, col]) && !isempty(canvas.overlays[row, col])
+    overlay_order = (!isnothing(canvas.overlay_colors[row, col]) && !isempty(canvas.overlays[row, col])) ? canvas.overlay_orders[row, col] : 0
+    guide_order = canvas.guides[row, col] != '\0' ? canvas.guide_orders[row, col] : 0
+    fill_order = canvas.fills[row, col] != 0x00 ? canvas.fill_orders[row, col] : 0
+    mask = canvas.masks[row, col]
+    mask_order = mask != 0x00 ? canvas.mask_orders[row, col] : 0
+    best_order = max(overlay_order, guide_order, fill_order, mask_order)
+    best_order == 0 && return " ", nothing, 1
+    if overlay_order == best_order
         text = canvas.overlays[row, col]
         return text, canvas.overlay_colors[row, col], max(textwidth(text), 1)
-    elseif canvas.guides[row, col] != '\0'
+    elseif guide_order == best_order
         return string(canvas.guides[row, col]), canvas.guide_colors[row, col], 1
-    elseif canvas.fills[row, col] != 0x00
+    elseif fill_order == best_order
         return string(_bar_fill_char(canvas.fills[row, col])), canvas.fill_colors[row, col], 1
     end
-    mask = canvas.masks[row, col]
-    mask == 0x00 ? (" ", nothing, 1) : (string(Char(0x2800 + mask)), canvas.mask_colors[row, col], 1)
+    string(Char(0x2800 + mask)), canvas.mask_colors[row, col], 1
 end
 
 _overlay_is_continuation(canvas::PlotCanvas, row::Int, col::Int) = !isnothing(canvas.overlay_colors[row, col]) && isempty(canvas.overlays[row, col])
@@ -386,25 +411,28 @@ function _clear_overlay_range!(canvas::PlotCanvas, row::Int, col_lo::Int, col_hi
         for clear_col in col:overlay_stop
             canvas.overlays[row, clear_col] = ""
             canvas.overlay_colors[row, clear_col] = nothing
+            canvas.overlay_orders[row, clear_col] = 0
         end
         col = overlay_stop + 1
     end
     nothing
 end
 
-function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)
+function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol, draw_order::Int)
     cell_row = fld(suby, 4) + 1
     cell_col = fld(subx, 2) + 1
     dot = _braille_dot(mod(subx, 2), mod(suby, 4))
     canvas.fills[cell_row, cell_col] |= UInt8(dot)
     canvas.fill_colors[cell_row, cell_col] = color
+    canvas.fill_orders[cell_row, cell_col] = max(canvas.fill_orders[cell_row, cell_col], draw_order)
     nothing
 end
 
-function _set_guide_cell!(canvas::PlotCanvas, row::Int, col::Int, orientation::Symbol, color::Symbol)
+function _set_guide_cell!(canvas::PlotCanvas, row::Int, col::Int, orientation::Symbol, color::Symbol, draw_order::Int)
     existing = canvas.guides[row, col]
     canvas.guides[row, col] = _merge_guide_char(existing, orientation)
     canvas.guide_colors[row, col] = color
+    canvas.guide_orders[row, col] = max(canvas.guide_orders[row, col], draw_order)
     nothing
 end
 
@@ -463,13 +491,14 @@ function _write_color_transition!(io::IO, active, next)
     next
 end
 
-function _set_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)
+function _set_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol, draw_order::Int)
     cell_row = fld(suby, 4) + 1
     cell_col = fld(subx, 2) + 1
     dot = _braille_dot(mod(subx, 2), mod(suby, 4))
     canvas.masks[cell_row, cell_col] |= UInt8(dot)
     _merge_mask_color!(canvas.mask_color_layers[cell_row, cell_col], UInt8(dot), color)
     canvas.mask_colors[cell_row, cell_col] = _dominant_mask_color(canvas.mask_color_layers[cell_row, cell_col])
+    canvas.mask_orders[cell_row, cell_col] = max(canvas.mask_orders[cell_row, cell_col], draw_order)
     nothing
 end
 
@@ -498,7 +527,7 @@ function _dominant_mask_color(layers::Vector{Pair{Symbol,UInt8}})::Union{Nothing
     best_color
 end
 
-function _draw_segment!(canvas::PlotCanvas, x0::Float64, y0::Float64, x1::Float64, y1::Float64, color::Symbol)
+function _draw_segment!(canvas::PlotCanvas, x0::Float64, y0::Float64, x1::Float64, y1::Float64, color::Symbol, draw_order::Int)
     ix0 = round(Int, x0)
     iy0 = round(Int, y0)
     ix1 = round(Int, x1)
@@ -511,7 +540,7 @@ function _draw_segment!(canvas::PlotCanvas, x0::Float64, y0::Float64, x1::Float6
     x = ix0
     y = iy0
     while true
-        _set_subpixel!(canvas, x, y, color)
+        _set_subpixel!(canvas, x, y, color, draw_order)
         x == ix1 && y == iy1 && break
         e2 = 2 * err
         if e2 >= dy

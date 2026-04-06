@@ -212,12 +212,16 @@ struct PlotCanvas
     masks::Matrix{UInt8}
     mask_colors::Matrix{Union{Nothing,Symbol}}
     mask_color_layers::Matrix{Vector{Pair{Symbol,UInt8}}}
+    mask_orders::Matrix{Int}
     fills::Matrix{UInt8}
     fill_colors::Matrix{Union{Nothing,Symbol}}
+    fill_orders::Matrix{Int}
     guides::Matrix{Char}
     guide_colors::Matrix{Union{Nothing,Symbol}}
+    guide_orders::Matrix{Int}
     overlays::Matrix{String}
     overlay_colors::Matrix{Union{Nothing,Symbol}}
+    overlay_orders::Matrix{Int}
 end
 
 """
