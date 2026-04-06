@@ -11,7 +11,7 @@ const ANSI_CODES = Dict{Symbol,String}(
     :white => "\e[37m",
     :gray => "\e[90m",
 )
-const UTC_TZ = TimeZone("UTC")
+const UTC_TZ = tz"UTC"
 
 """
     Axis
