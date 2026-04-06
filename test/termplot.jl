@@ -479,6 +479,24 @@ end
     @test count(==('◆'), text) == 2
 end
 
+@testitem "linked Date and DateTime x axes promote to datetime across panels" setup = [TermPlotSetup] begin
+    fig = Figure(GridLayout(1, 2); width=96, height=16, linkx=true, legend=false)
+    left = panel!(fig, 1, 1; xlabel="Time", ylabel="y", x_date_format=dateformat"yyyy-mm-dd HH:MM")
+    right = panel!(fig, 1, 2; xlabel="Time", ylabel="y", x_date_format=dateformat"yyyy-mm-dd HH:MM")
+
+    line!(left, [Date(2024, 1, 1), Date(2024, 1, 2)], [1.0, 2.0]; color=:cyan, marker=:diamond)
+    line!(right, [DateTime(2024, 1, 1, 12), DateTime(2024, 1, 2, 12)], [1.5, 2.5]; color=:yellow, marker=:diamond)
+
+    scans = [TermPlot._scan_panel(left), TermPlot._scan_panel(right)]
+    shared = TermPlot._combine_shared_x(scans, [left, right])
+    text = TermPlot._strip_ansi(render(fig))
+
+    @test shared.xcontext.kind == :datetime
+    @test shared.limits[1] <= Float64(Dates.datetime2epochms(DateTime(Date(2024, 1, 1))))
+    @test shared.limits[2] >= Float64(Dates.datetime2epochms(DateTime(2024, 1, 2, 12)))
+    @test count(==('◆'), text) == 4
+end
+
 @testitem "log scale validation" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=18)
     panel!(fig; xlabel="x", ylabel="y")

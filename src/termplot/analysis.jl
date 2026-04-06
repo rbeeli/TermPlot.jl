@@ -59,9 +59,11 @@ function _scan_panel(panel::Panel)
 end
 
 function _combine_shared_x(scans, panels)
-    kinds = unique(scan.xcontext.kind for scan in scans)
-    length(kinds) <= 1 || throw(ArgumentError("linked x-axes require panels with a consistent x-axis type"))
-    xcontext = isempty(scans) ? XContext(:numeric, nothing, String[], Dict{String,Float64}()) : scans[1].xcontext
+    kind = nothing
+    for scan in scans
+        kind = _merge_x_kind(kind, scan.xcontext.kind)
+    end
+    xcontext = _shared_xcontext(scans, something(kind, :numeric))
     if xcontext.kind == :categorical
         categories = String[]
         seen = Set{String}()
@@ -83,6 +85,17 @@ function _combine_shared_x(scans, panels)
     end
     limits = _combine_limits((scan.xlimits for scan in scans); scale=:linear)
     (xcontext=xcontext, limits=limits)
+end
+
+function _shared_xcontext(scans, kind::Symbol)::XContext
+    isempty(scans) && return XContext(:numeric, nothing, String[], Dict{String,Float64}())
+    if kind == :categorical
+        return scans[1].xcontext
+    elseif kind == :zoned
+        timezone = findfirst(scan -> !isnothing(scan.xcontext.timezone), scans)
+        return XContext(:zoned, isnothing(timezone) ? nothing : scans[timezone].xcontext.timezone, String[], Dict{String,Float64}())
+    end
+    XContext(kind, nothing, String[], Dict{String,Float64}())
 end
 
 function _panel_xvalues(panel::Panel, xcontext::XContext)::Vector{Float64}
@@ -373,17 +386,7 @@ function _infer_xcontext(panel::Panel)::XContext
 
     function register_kind(value)
         local value_kind = _x_kind(value)
-        if isnothing(kind)
-            kind = value_kind
-        elseif kind != value_kind
-            if kind == :date && value_kind == :datetime
-                kind = :datetime
-            elseif kind == :datetime && value_kind == :date
-                nothing
-            else
-                throw(ArgumentError("mixed x-axis types are not supported: $(kind) and $(value_kind)"))
-            end
-        end
+        kind = _merge_x_kind(kind, value_kind)
         if value_kind == :zoned
             context_timezone = isnothing(context_timezone) ? TimeZones.timezone(value) : context_timezone
         elseif value_kind == :categorical
@@ -417,6 +420,15 @@ function _infer_xcontext(panel::Panel)::XContext
         return _categorical_context(categories)
     end
     XContext(kind, context_timezone, String[], Dict{String,Float64}())
+end
+
+_merge_x_kind(current::Nothing, incoming::Symbol) = incoming
+
+function _merge_x_kind(current::Symbol, incoming::Symbol)::Symbol
+    current == incoming && return current
+    current == :date && incoming == :datetime && return :datetime
+    current == :datetime && incoming == :date && return :datetime
+    throw(ArgumentError("mixed x-axis types are not supported: $(current) and $(incoming)"))
 end
 
 function _categorical_context(categories::Vector{String})::XContext
