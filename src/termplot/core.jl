@@ -113,6 +113,24 @@ struct VLine{TX} <: AbstractSeries
 end
 
 """
+    Annotation
+
+Text annotation anchored either in axis coordinates or in plot-relative
+(`:paper`) coordinates.
+"""
+struct Annotation{TX,TY} <: AbstractSeries
+    x::TX
+    y::TY
+    text::String
+    xref::Symbol
+    yref::Symbol
+    xanchor::Symbol
+    yanchor::Symbol
+    align::Symbol
+    color::Union{Nothing,Symbol}
+end
+
+"""
     Panel
 
 A subplot inside a `Figure`.
@@ -599,8 +617,111 @@ function VLine(
     VLine(x, String(label), normalize_color(color))
 end
 
+"""
+    Annotation(x, y, text; xref=:x, yref=:y, xanchor=:center, yanchor=:middle, align=:center, color=nothing)
+
+Construct a text annotation.
+
+`xref` and `yref` control how the coordinates are interpreted:
+
+- `xref=:x`: x position in x-axis space
+- `xref=:paper` or `xref=:plot`: x position relative to the plot area
+- `yref=:y`: y position in the left y-axis space
+- `yref=:y2`: y position in the right y-axis space
+- `yref=:paper` or `yref=:plot`: y position relative to the plot area
+
+`xanchor` and `yanchor` define which point of the annotation box is attached to
+`(x, y)`. Use `xanchor=:left/:center/:right` and
+`yanchor=:top/:middle/:bottom` to cover corners, edge midpoints, and center.
+
+`align` controls multi-line text alignment inside the annotation box.
+
+# Keywords
+
+- `xref`: `:x`, `:paper`, or `:plot`
+- `yref`: `:y`, `:y2`, `:paper`, or `:plot`
+- `xanchor`: `:left`, `:center`, or `:right`
+- `yanchor`: `:top`, `:middle`, `:bottom`, or `:center`
+- `align`: `:left`, `:center`, or `:right`
+- `color`: annotation text color
+"""
+function Annotation(
+    x,
+    y,
+    text::AbstractString;
+    xref::Union{Symbol,AbstractString}=:x,
+    yref::Union{Symbol,AbstractString}=:y,
+    xanchor::Union{Symbol,AbstractString}=:center,
+    yanchor::Union{Symbol,AbstractString}=:middle,
+    align::Union{Symbol,AbstractString}=:center,
+    color=nothing,
+)
+    normalized_xref = _normalize_annotation_xref(xref)
+    normalized_yref = _normalize_annotation_yref(yref)
+    normalized_xref === :paper && _validate_annotation_paper_coord(x, :x)
+    _validate_annotation_ycoord(y, normalized_yref)
+    Annotation(
+        x,
+        y,
+        replace(String(text), "\r\n" => "\n", '\r' => '\n'),
+        normalized_xref,
+        normalized_yref,
+        _normalize_annotation_xanchor(xanchor),
+        _normalize_annotation_yanchor(yanchor),
+        _normalize_annotation_align(align),
+        normalize_color(color),
+    )
+end
+
 _resolve_series_color(color::Nothing, ix::Int) = DEFAULT_PALETTE[mod1(ix, length(DEFAULT_PALETTE))]
 _resolve_series_color(color::Symbol, ::Int) = color
+
+function _normalize_annotation_xref(xref)::Symbol
+    ref = Symbol(lowercase(String(xref)))
+    ref === :plot && return :paper
+    ref in (:x, :paper) || throw(ArgumentError("xref must be :x, :paper, or :plot"))
+    ref
+end
+
+function _normalize_annotation_yref(yref)::Symbol
+    ref = Symbol(lowercase(String(yref)))
+    ref === :plot && return :paper
+    ref === :left && return :y
+    ref === :right && return :y2
+    ref in (:y, :y2, :paper) || throw(ArgumentError("yref must be :y, :y2, :paper, or :plot"))
+    ref
+end
+
+function _normalize_annotation_xanchor(xanchor)::Symbol
+    anchor = Symbol(lowercase(String(xanchor)))
+    anchor in (:left, :center, :right) || throw(ArgumentError("xanchor must be :left, :center, or :right"))
+    anchor
+end
+
+function _normalize_annotation_yanchor(yanchor)::Symbol
+    anchor = Symbol(lowercase(String(yanchor)))
+    anchor === :center && return :middle
+    anchor in (:top, :middle, :bottom) || throw(ArgumentError("yanchor must be :top, :middle, :bottom, or :center"))
+    anchor
+end
+
+function _normalize_annotation_align(align)::Symbol
+    value = Symbol(lowercase(String(align)))
+    value in (:left, :center, :right) || throw(ArgumentError("align must be :left, :center, or :right"))
+    value
+end
+
+function _validate_annotation_paper_coord(value, axis_name::Symbol)
+    value isa Real || throw(ArgumentError("annotation $(axis_name) coordinate must be real when using :paper / :plot references"))
+    isfinite(Float64(value)) || throw(ArgumentError("annotation $(axis_name) coordinate must be finite when using :paper / :plot references"))
+    nothing
+end
+
+function _validate_annotation_ycoord(value, yref::Symbol)
+    value isa Real || throw(ArgumentError("annotation y coordinate must be real"))
+    isfinite(Float64(value)) || throw(ArgumentError("annotation y coordinate must be finite"))
+    nothing
+end
 
 function _validate_scale(scale::Symbol, axis_kind::Symbol)
     allowed = axis_kind === :y ? (:linear, :log10) : (:linear,)

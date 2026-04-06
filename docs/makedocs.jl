@@ -23,6 +23,7 @@ pages = [
         "Bar Charts" => "examples/bars.md",
         "Stacked Bars" => "examples/stacked_bars.md",
         "Scatter Plots" => "examples/scatter.md",
+        "Annotations" => "examples/annotations.md",
         "Reference Lines" => "examples/reference_lines.md",
         "Axes" => "examples/axes.md",
         "Messy Data" => "examples/messy_data.md",

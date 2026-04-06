@@ -218,6 +218,26 @@ function vline!(target::Union{Figure,Panel}, x; kwargs...)
     push!(currentpanel(target), VLine(x; kwargs...))
 end
 
+"""
+    annotate!(target, x, y, text; kwargs...)
+
+Add a text annotation to a `Figure` or `Panel`.
+
+When `target` is a `Figure`, the annotation is added to the current panel.
+
+# Keywords
+
+- `xref`: `:x`, `:paper`, or `:plot`
+- `yref`: `:y`, `:y2`, `:paper`, or `:plot`
+- `xanchor`: `:left`, `:center`, or `:right`
+- `yanchor`: `:top`, `:middle`, `:bottom`, or `:center`
+- `align`: `:left`, `:center`, or `:right`
+- `color`: annotation text color
+"""
+function annotate!(target::Union{Figure,Panel}, x, y, text::AbstractString; kwargs...)
+    push!(currentpanel(target), Annotation(x, y, text; kwargs...))
+end
+
 _validate_axis_limit_value(value::Real, axis_name::AbstractString) = isfinite(Float64(value)) ? value : throw(ArgumentError("$(axis_name) limits must be finite"))
 _validate_axis_limit_value(value, ::AbstractString) = value
 

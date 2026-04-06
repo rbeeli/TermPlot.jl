@@ -26,6 +26,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 - bar plots
 - scatter plots
 - stacked bar plots
+- text annotations in axis or plot-relative coordinates
 - horizontal and vertical guide lines
 - `Date`, `DateTime`, and `ZonedDateTime` x-axes
 - manual axis limits

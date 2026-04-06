@@ -879,6 +879,32 @@ function _take_textwidth_prefix(text::AbstractString, width::Int)::String
     first(_split_textwidth_prefix(text, width))
 end
 
+function _textwidth_window(text::AbstractString, left_skip::Int, width::Int)::Tuple{String,Int}
+    width <= 0 && return "", 0
+    remaining_skip = max(left_skip, 0)
+    visible = IOBuffer()
+    used = 0
+
+    for grapheme in Base.Unicode.graphemes(text)
+        grapheme_width = textwidth(grapheme)
+        grapheme_width <= 0 && continue
+
+        if remaining_skip >= grapheme_width
+            remaining_skip -= grapheme_width
+            continue
+        elseif remaining_skip > 0
+            remaining_skip = 0
+            continue
+        end
+
+        used + grapheme_width > width && break
+        write(visible, grapheme)
+        used += grapheme_width
+    end
+
+    String(take!(visible)), used
+end
+
 function _write_text_cells!(cells::Vector{String}, start::Int, text::AbstractString)
     pos = start
     for grapheme in Base.Unicode.graphemes(text)

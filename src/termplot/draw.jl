@@ -21,7 +21,7 @@ struct MarkerPrimitive <: AbstractDrawPrimitive
     col::Int
     text::String
     width::Int
-    color::Symbol
+    color::Union{Nothing,Symbol}
     order::Int
 end
 
@@ -129,6 +129,8 @@ function _collect_primitives(prepared::PreparedPanel, plot_width::Int, plot_heig
         elseif series isa VLine
             color = _resolve_series_color(series.color, auto_ix += 1)
             next_order = _append_vline_primitives!(primitives, prepared, series, plot_width, plot_height, color, next_order)
+        elseif series isa Annotation
+            next_order = _append_annotation_primitives!(primitives, prepared, series, plot_width, plot_height, next_order)
         end
     end
     primitives
@@ -338,6 +340,34 @@ function _append_vline_primitives!(
     next_order + 1
 end
 
+function _append_annotation_primitives!(
+    primitives::Vector{DrawPrimitive},
+    prepared::PreparedPanel,
+    series::Annotation,
+    plot_width::Int,
+    plot_height::Int,
+    next_order::Int,
+)::Int
+    isempty(series.text) && return next_order
+    anchor_col = _annotation_anchor_col(series, prepared, plot_width)
+    anchor_row = _annotation_anchor_row(series, prepared, plot_height)
+    (isnothing(anchor_col) || isnothing(anchor_row)) && return next_order
+
+    lines = split(series.text, '\n'; keepempty=true)
+    widths = [textwidth(line) for line in lines]
+    box_width = maximum(widths; init=0)
+    top_row = anchor_row - _annotation_y_offset(length(lines), series.yanchor)
+    left_col = anchor_col - _annotation_x_offset(box_width, series.xanchor)
+
+    for (line_ix, line) in pairs(lines)
+        row = top_row + line_ix - 1
+        1 <= row <= plot_height || continue
+        line_col = left_col + _annotation_align_offset(box_width, widths[line_ix], series.align)
+        next_order = _append_text_primitive!(primitives, row, line_col, line, plot_width, series.color, next_order)
+    end
+    next_order
+end
+
 function _append_segment_primitives!(
     primitives::Vector{DrawPrimitive},
     prev::Tuple{Float64,Float64},
@@ -381,6 +411,28 @@ function _append_marker_primitive!(
     cell_col = clamp(fld(point[1], 2) + 1, 1, max(plot_width - marker_width + 1, 1))
     cell_row = clamp(fld(point[2], 4) + 1, 1, plot_height)
     push!(primitives, MarkerPrimitive(cell_row, cell_col, marker_text, marker_width, color, next_order))
+    next_order + 1
+end
+
+function _append_text_primitive!(
+    primitives::Vector{DrawPrimitive},
+    row::Int,
+    col::Int,
+    text::AbstractString,
+    plot_width::Int,
+    color::Union{Nothing,Symbol},
+    next_order::Int,
+)::Int
+    text_width = textwidth(text)
+    text_width <= 0 && return next_order
+
+    visible_start = max(col, 1)
+    visible_stop = min(col + text_width - 1, plot_width)
+    visible_start <= visible_stop || return next_order
+
+    clipped_text, clipped_width = _textwidth_window(text, max(1 - col, 0), visible_stop - visible_start + 1)
+    clipped_width <= 0 && return next_order
+    push!(primitives, MarkerPrimitive(row, visible_start, clipped_text, clipped_width, color, next_order))
     next_order + 1
 end
 
@@ -454,6 +506,37 @@ function _clipped_subinterval(
     (isnothing(sub_lo) || isnothing(sub_hi)) && return nothing
     sub_lo, sub_hi
 end
+
+function _annotation_anchor_col(series::Annotation, prepared::PreparedPanel, plot_width::Int)::Union{Nothing,Int}
+    if series.xref === :x
+        x = _convert_x(series.x, prepared.xcontext)
+        isfinite(x) || return nothing
+        subx = _value_to_subx_unclipped(x, prepared.xaxis, plot_width * 2)
+    else
+        x = _finite_y(series.x)
+        isfinite(x) || return nothing
+        subx = x * (plot_width * 2 - 1)
+    end
+    fld(round(Int, subx), 2) + 1
+end
+
+function _annotation_anchor_row(series::Annotation, prepared::PreparedPanel, plot_height::Int)::Union{Nothing,Int}
+    if series.yref === :paper
+        y = _finite_y(series.y)
+        isfinite(y) || return nothing
+        suby = (1.0 - y) * (plot_height * 4 - 1)
+    else
+        y = _finite_y(series.y)
+        isfinite(y) || return nothing
+        axis = series.yref === :y2 ? prepared.yright : prepared.yleft
+        suby = _value_to_suby_unclipped(y, axis, plot_height * 4)
+    end
+    fld(round(Int, suby), 4) + 1
+end
+
+_annotation_x_offset(width::Int, xanchor::Symbol)::Int = xanchor === :left ? 0 : xanchor === :center ? fld(max(width - 1, 0), 2) : max(width - 1, 0)
+_annotation_y_offset(height::Int, yanchor::Symbol)::Int = yanchor === :top ? 0 : yanchor === :middle ? fld(max(height - 1, 0), 2) : max(height - 1, 0)
+_annotation_align_offset(box_width::Int, line_width::Int, align::Symbol)::Int = align === :left ? 0 : align === :center ? fld(max(box_width - line_width, 0), 2) : max(box_width - line_width, 0)
 
 function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::String
     io = IOBuffer()
@@ -561,7 +644,7 @@ function _write_text_span!(
     col::Int,
     text::String,
     width::Int,
-    color::Symbol,
+    color::Union{Nothing,Symbol},
     order::Int,
 )
     stop = min(col + width - 1, size(canvas.text_heads, 2))

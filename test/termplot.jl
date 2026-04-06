@@ -439,6 +439,64 @@ end
     @test color === :cyan
 end
 
+@testitem "annotation API validates coordinate references and anchors" setup = [TermPlotSetup] begin
+    fig = Figure(; width=60, height=16)
+    panel!(fig; xlabel="x", ylabel="y", ylabel_right="y2")
+
+    @test_throws ArgumentError annotate!(fig, Date(2024, 1, 1), 0.5, "bad"; xref=:paper)
+    @test_throws ArgumentError annotate!(fig, 0.5, "bad", "oops")
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; xref=:bad)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; yref=:bad)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; xanchor=:bad)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; yanchor=:bad)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; align=:bad)
+end
+
+@testitem "paper annotations support anchors, alignment, unicode, and layering" setup = [TermPlotSetup] begin
+    fig = Figure(; width=48, height=16, legend=false)
+    panel!(fig; xlabel="x", ylabel="y")
+    line!(fig, [0.0, 1.0], [0.0, 1.0]; color=:cyan)
+    annotate!(fig, 0.0, 1.0, "a\nzz"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:top, align=:right, color=:yellow)
+    annotate!(fig, 1.0, 0.0, "猫"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:bottom, color=:magenta)
+    annotate!(fig, 1.0, 1.0, "TR"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:top, color=:green)
+    annotate!(fig, 0.5, 0.5, "X"; color=:green)
+
+    scan = TermPlot._scan_panel(fig.current)
+    prepared = TermPlot._prepare_panel(fig.current, scan, nothing, nothing, nothing)
+    canvas = TermPlot._render_plot_canvas(prepared, 20, 8)
+
+    @test startswith(TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 1, false)), " a")
+    @test endswith(TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 1, false)), "TR")
+    @test startswith(TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 2, false)), "zz")
+    @test endswith(TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 8, false)), "猫")
+
+    point = TermPlot._series_point(prepared.xcontext, prepared.xaxis, prepared.yleft, 0.5, 0.5, 40, 32)
+    row = fld(point[2], 4) + 1
+    col = fld(point[1], 2) + 1
+    text, color, _ = TermPlot._plot_cell(canvas, row, col)
+    @test text == "X"
+    @test color === :green
+end
+
+@testitem "axis-space annotations infer x context without affecting autoscaling" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=18, legend=false)
+    panel!(fig; xlabel="Date", ylabel="Left", ylabel_right="Right", x_date_format=dateformat"yyyy-mm-dd")
+    annotate!(fig, Date(2024, 1, 2), 1.5, "Start"; color=:yellow)
+    annotate!(fig, Date(2024, 1, 3), 10.0, "R"; yref=:y2, color=:magenta)
+    xlims!(fig, Date(2024, 1, 1), Date(2024, 1, 4))
+    ylims!(fig, 0.0, 2.0)
+    ylims!(fig, 0.0, 12.0; yside=:right)
+
+    scan = TermPlot._scan_panel(fig.current)
+    text = TermPlot._strip_ansi(render(fig))
+
+    @test scan.xcontext.kind == :date
+    @test scan.yleft_limits == (0.0, 2.0)
+    @test scan.yright_limits == (0.0, 12.0)
+    @test occursin("Start", text)
+    @test occursin("R", text)
+end
+
 @testitem "scatter and vertical reference lines render" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel!(fig; title="Signals", xlabel="Date", ylabel="Score", x_date_format=dateformat"yyyy-mm-dd")

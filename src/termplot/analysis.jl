@@ -205,7 +205,10 @@ function _scan_series!(scan::PanelScanAccumulator, ::Panel, xcontext::XContext, 
     nothing
 end
 
+_scan_series!(::PanelScanAccumulator, ::Panel, ::XContext, ::Annotation) = nothing
+
 _append_series_xvalues!(::Vector{Float64}, ::XContext, ::HLine) = nothing
+_append_series_xvalues!(::Vector{Float64}, ::XContext, ::Annotation) = nothing
 
 function _append_series_xvalues!(xvalues::Vector{Float64}, xcontext::XContext, series::Union{Line,Scatter,Stem})
     for (x_raw, y_raw) in zip(series.x, series.y)
@@ -406,6 +409,8 @@ function _infer_xcontext(panel::Panel)::XContext
                 register_kind(value)
             end
         elseif series isa VLine
+            ismissing(series.x) || register_kind(series.x)
+        elseif series isa Annotation && series.xref === :x
             ismissing(series.x) || register_kind(series.x)
         end
     end
