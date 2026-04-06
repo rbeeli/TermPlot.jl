@@ -35,10 +35,10 @@ struct GuideSpanPrimitive <: AbstractDrawPrimitive
 end
 
 struct FillRectPrimitive <: AbstractDrawPrimitive
-    xmin::Int
-    xmax::Int
-    ymin::Int
-    ymax::Int
+    colmin::Int
+    colmax::Int
+    rowmin::Int
+    rowmax::Int
     color::Symbol
     fillchar::Char
     order::Int
@@ -289,14 +289,10 @@ function _append_bar_primitives!(
             fillchar = series.fillchars[stack_ix]
             y_lo = y >= 0.0 ? pos_base : neg_base + y
             y_hi = y >= 0.0 ? pos_base + y : neg_base
-            xspan = _clipped_subinterval(x_center - half_width, x_center + half_width, prepared.xaxis, plot_width * 2, _value_to_subx)
-            yspan = _clipped_subinterval(y_lo, y_hi, axis, plot_height * 4, _value_to_suby)
-            if !isnothing(xspan) && !isnothing(yspan)
-                xmin = clamp(min(xspan[1], xspan[2]), 0, plot_width * 2 - 1)
-                xmax = clamp(max(xspan[1], xspan[2]), 0, plot_width * 2 - 1)
-                ymin = clamp(min(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
-                ymax = clamp(max(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
-                push!(primitives, FillRectPrimitive(xmin, xmax, ymin, ymax, color, fillchar, next_order))
+            colspan = _clipped_cell_interval(x_center - half_width, x_center + half_width, prepared.xaxis, plot_width, _value_to_subx, 2)
+            rowspan = _clipped_cell_interval(y_lo, y_hi, axis, plot_height, _value_to_suby, 4)
+            if !isnothing(colspan) && !isnothing(rowspan)
+                push!(primitives, FillRectPrimitive(colspan[1], colspan[2], rowspan[1], rowspan[2], color, fillchar, next_order))
                 next_order += 1
             end
             if y >= 0.0
@@ -466,9 +462,9 @@ function _apply_primitive!(canvas::PlotCanvas, primitive::GuideSpanPrimitive)
 end
 
 function _apply_primitive!(canvas::PlotCanvas, primitive::FillRectPrimitive)
-    for suby in primitive.ymin:primitive.ymax
-        for subx in primitive.xmin:primitive.xmax
-            _set_fill_subpixel!(canvas, subx, suby, primitive.color, primitive.fillchar, primitive.order)
+    for row in primitive.rowmin:primitive.rowmax
+        for col in primitive.colmin:primitive.colmax
+            _set_fill_cell!(canvas, row, col, primitive.color, primitive.fillchar, primitive.order)
         end
     end
     nothing
@@ -509,6 +505,21 @@ function _clipped_subinterval(
     sub_hi = projector(clipped_hi, axis, subsize)
     (isnothing(sub_lo) || isnothing(sub_hi)) && return nothing
     sub_lo, sub_hi
+end
+
+function _clipped_cell_interval(
+    lo_value::Float64,
+    hi_value::Float64,
+    axis::AxisInfo,
+    cellsize::Int,
+    projector::Function,
+    subcells_per_cell::Int,
+)::Union{Nothing,Tuple{Int,Int}}
+    subspan = _clipped_subinterval(lo_value, hi_value, axis, cellsize * subcells_per_cell, projector)
+    isnothing(subspan) && return nothing
+    cell_lo = clamp(fld(min(subspan[1], subspan[2]), subcells_per_cell) + 1, 1, cellsize)
+    cell_hi = clamp(fld(max(subspan[1], subspan[2]), subcells_per_cell) + 1, 1, cellsize)
+    cell_lo, cell_hi
 end
 
 function _annotation_anchor_col(series::Annotation, prepared::PreparedPanel, plot_width::Int)::Union{Nothing,Int}
@@ -721,6 +732,18 @@ function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Sy
         canvas.fill_orders[quadrant, cell_row, cell_col] = order
         canvas.fill_colors[quadrant, cell_row, cell_col] = color
         canvas.fill_chars[quadrant, cell_row, cell_col] = fillchar
+    end
+    nothing
+end
+
+function _set_fill_cell!(canvas::PlotCanvas, row::Int, col::Int, color::Symbol, fillchar::Char, order::Int)
+    for quadrant in 1:4
+        canvas.fill_visible[quadrant, row, col] = true
+        if order >= canvas.fill_orders[quadrant, row, col]
+            canvas.fill_orders[quadrant, row, col] = order
+            canvas.fill_colors[quadrant, row, col] = color
+            canvas.fill_chars[quadrant, row, col] = fillchar
+        end
     end
     nothing
 end

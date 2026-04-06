@@ -1,5 +1,5 @@
 const DEFAULT_PALETTE = (:cyan, :blue, :yellow, :red, :magenta, :green, :white, :black, :gray)
-const DEFAULT_STACKED_BAR_FILL_CHARS = ('█', '▓', '▒', '░', '▩', '▦', '▨', '▧')
+const DEFAULT_STACKED_BAR_FILL_CHARS = ('█', '▓', '▒', '░', '▞', '╱', '╲', '╳', '#', 'O', 'X', '+', '%', '@')
 const ANSI_CODES = Dict{Symbol,String}(
     :black => "\e[30m",
     :red => "\e[31m",
