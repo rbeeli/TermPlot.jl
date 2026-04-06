@@ -12,6 +12,14 @@ const ANSI_CODES = Dict{Symbol,String}(
 )
 const UTC_TZ = TimeZone("UTC")
 
+"""
+    Axis
+
+Axis configuration for one panel edge.
+
+`Axis` stores the label, scale, tick target, optional explicit limits, and
+optional date/time format used during rendering.
+"""
 Base.@kwdef mutable struct Axis
     label::String = ""
     side::Symbol = :left
@@ -23,6 +31,11 @@ end
 
 abstract type AbstractSeries end
 
+"""
+    Line
+
+Connected line series rendered with braille rasterization and optional markers.
+"""
 struct Line{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     x::TX
     y::TY
@@ -33,6 +46,11 @@ struct Line{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     marker::Union{Nothing,Char}
 end
 
+"""
+    Stem
+
+Stem plot series with a configurable baseline and optional endpoint markers.
+"""
 struct Stem{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     x::TX
     y::TY
@@ -43,6 +61,11 @@ struct Stem{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     marker::Union{Nothing,Char}
 end
 
+"""
+    Scatter
+
+Point-only series rendered with a marker at each valid sample.
+"""
 struct Scatter{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     x::TX
     y::TY
@@ -52,6 +75,11 @@ struct Scatter{TX<:AbstractVector,TY<:AbstractVector} <: AbstractSeries
     marker::Char
 end
 
+"""
+    Bar
+
+Bar or stacked-bar series with one or more y vectors over shared x values.
+"""
 struct Bar{TX<:AbstractVector} <: AbstractSeries
     x::TX
     ys::Vector{AbstractVector}
@@ -61,6 +89,11 @@ struct Bar{TX<:AbstractVector} <: AbstractSeries
     yside::Symbol
 end
 
+"""
+    HLine
+
+Horizontal reference line attached to the left or right y-axis.
+"""
 struct HLine <: AbstractSeries
     y::Float64
     label::String
@@ -68,12 +101,25 @@ struct HLine <: AbstractSeries
     yside::Symbol
 end
 
+"""
+    VLine
+
+Vertical reference line attached to the x-axis.
+"""
 struct VLine{TX} <: AbstractSeries
     x::TX
     label::String
     color::Union{Nothing,Symbol}
 end
 
+"""
+    Panel
+
+A subplot inside a `Figure`.
+
+Panels hold their own axes and series. In normal use you obtain them from
+`panel!` rather than constructing them manually.
+"""
 Base.@kwdef mutable struct Panel
     title::String = ""
     xaxis::Axis = Axis(; side=:bottom)
@@ -82,11 +128,24 @@ Base.@kwdef mutable struct Panel
     series::Vector{AbstractSeries} = AbstractSeries[]
 end
 
+"""
+    GridSeam
+
+Seam configuration between neighboring rows or columns in a `GridLayout`.
+"""
 struct GridSeam
     style::Symbol
     gap::Int
 end
 
+"""
+    GridLayout
+
+Grid definition for multi-panel figures.
+
+`GridLayout` controls row and column counts, relative track weights, seam
+styles, and optional alignment groups for shared plot geometry.
+"""
 struct GridLayout
     rows::Int
     cols::Int
@@ -104,6 +163,14 @@ struct PanelPlacement
     panel::Panel
 end
 
+"""
+    Figure
+
+Top-level chart container.
+
+A `Figure` owns the layout, panel placements, shared rendering options, and the
+current panel used by plotting calls that target the figure directly.
+"""
 mutable struct Figure
     title::String
     width::Union{Nothing,Int}
@@ -153,6 +220,32 @@ struct PlotCanvas
     overlay_colors::Matrix{Union{Nothing,Symbol}}
 end
 
+"""
+    GridLayout(
+        rows,
+        cols;
+        rowweights=fill(1.0, rows),
+        colweights=fill(1.0, cols),
+        rowseams=GridSeam(:separate; gap=1),
+        colseams=GridSeam(:separate; gap=3),
+        rowaligns=:none,
+        colaligns=:none,
+    )
+
+Create a grid layout for a multi-panel figure.
+
+`rowweights` and `colweights` control relative track sizes. `rowseams` and
+`colseams` accept either one seam specification or one per internal boundary.
+`rowaligns` and `colaligns` accept `:none`, `:all`, booleans, `nothing`, or a
+vector of alignment-group labels.
+
+# Keywords
+
+- `rowweights`, `colweights`: positive finite relative track sizes
+- `rowseams`, `colseams`: one `GridSeam`/style for all internal seams or one per seam
+- `rowaligns`, `colaligns`: `:none`, `:all`, `true`, `false`, `nothing`, or a
+  vector of alignment-group labels
+"""
 function GridLayout(
     rows::Integer,
     cols::Integer;
@@ -177,6 +270,19 @@ function GridLayout(
     )
 end
 
+"""
+    GridSeam(style=:separate; gap=style === :adjacent ? 0 : 1)
+
+Create a seam specification for a grid boundary.
+
+Use `:separate` for a visible gap or `:adjacent` for a shared border with no
+gap.
+
+# Arguments
+
+- `style`: `:separate` or `:adjacent`
+- `gap`: non-negative integer spacing; must be `0` for `:adjacent`
+"""
 function GridSeam(style::Symbol=:separate; gap::Integer=style === :adjacent ? 0 : 1)
     style in (:separate, :adjacent) || throw(ArgumentError("unsupported seam style $(style)"))
     gap >= 0 || throw(ArgumentError("seam gap must be >= 0"))
@@ -184,6 +290,24 @@ function GridSeam(style::Symbol=:separate; gap::Integer=style === :adjacent ? 0 
     GridSeam(style, Int(gap))
 end
 
+"""
+    Figure(; title="", width=nothing, height=24, layout=GridLayout(1, 1), linkx=false, linky=false, legend=true)
+
+Create a `Figure`.
+
+`width` defaults to the active display width, `height` is clamped to a minimum
+usable size, and `linkx` / `linky` enable shared axis limits across panels.
+
+# Keywords
+
+- `title`: figure title
+- `width`: total output width; `nothing` lets the terminal renderer decide
+- `height`: total output height
+- `layout`: `GridLayout` describing the panel grid
+- `linkx`: share x limits across panels
+- `linky`: share y limits across panels, per side
+- `legend`: show the combined legend/header content
+"""
 function Figure(;
     title::AbstractString="",
     width::Union{Nothing,Int}=nothing,
@@ -262,6 +386,20 @@ function yside_symbol(yside::Integer)::Symbol
     throw(ArgumentError("yside must be :left, :right, 1, or 2"))
 end
 
+"""
+    Line(x, y; label="", color=nothing, yside=:left, step=:linear, marker=nothing)
+
+Construct a line series.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `step`: `:linear`, `:pre`, `:mid`, or `:post`
+- `marker`: `nothing`, a named marker (`"dot"`, `"diamond"`, `"cross"`,
+  `"square"`, `"circle"`, `"hd"`), or a single character
+"""
 function Line(
     x::AbstractVector,
     y::AbstractVector;
@@ -283,6 +421,19 @@ function Line(
     )
 end
 
+"""
+    Scatter(x, y; label="", color=nothing, yside=:left, marker="dot")
+
+Construct a scatter series.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `marker`: a named marker (`"dot"`, `"diamond"`, `"cross"`, `"square"`,
+  `"circle"`, `"hd"`) or a single character
+"""
 function Scatter(
     x::AbstractVector,
     y::AbstractVector;
@@ -295,6 +446,20 @@ function Scatter(
     Scatter(x, y, String(label), normalize_color(color), yside_symbol(yside), normalize_marker(marker))
 end
 
+"""
+    Stem(x, y; label="", color=nothing, yside=:left, baseline=0.0, marker="dot")
+
+Construct a stem series.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `baseline`: finite numeric stem baseline
+- `marker`: `nothing`, a named marker (`"dot"`, `"diamond"`, `"cross"`,
+  `"square"`, `"circle"`, `"hd"`), or a single character
+"""
 function Stem(
     x::AbstractVector,
     y::AbstractVector;
@@ -324,6 +489,18 @@ function _normalize_bar_width(width::Real)::Float64
     width_value
 end
 
+"""
+    Bar(x, y; label="", color=nothing, width=0.8, yside=:left)
+
+Construct a single-series bar chart.
+
+# Keywords
+
+- `label`: legend label
+- `color`: fill color
+- `width`: positive finite bar width in x-axis units
+- `yside`: `:left`, `:right`, `1`, or `2`
+"""
 function Bar(
     x::AbstractVector,
     y::AbstractVector;
@@ -343,6 +520,18 @@ function Bar(
     )
 end
 
+"""
+    Bar(x, ys...; labels, colors=fill(nothing, length(ys)), width=0.8, yside=:left)
+
+Construct a stacked bar chart.
+
+# Keywords
+
+- `labels`: one label per stack component
+- `colors`: one color per stack component
+- `width`: positive finite bar width in x-axis units
+- `yside`: `:left`, `:right`, `1`, or `2`
+"""
 function Bar(
     x::AbstractVector,
     ys::AbstractVector...;
@@ -366,6 +555,17 @@ function Bar(
     )
 end
 
+"""
+    HLine(y; label="", color=nothing, yside=:left)
+
+Construct a horizontal reference line.
+
+# Keywords
+
+- `label`: legend label
+- `color`: line color
+- `yside`: `:left`, `:right`, `1`, or `2`
+"""
 function HLine(
     y::Real;
     label::AbstractString="",
@@ -375,6 +575,16 @@ function HLine(
     HLine(Float64(y), String(label), normalize_color(color), yside_symbol(yside))
 end
 
+"""
+    VLine(x; label="", color=nothing)
+
+Construct a vertical reference line.
+
+# Keywords
+
+- `label`: legend label
+- `color`: line color
+"""
 function VLine(
     x;
     label::AbstractString="",

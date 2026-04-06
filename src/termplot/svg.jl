@@ -2,6 +2,21 @@ const SVG_DEFAULT_FONT_FAMILY = "\"JuliaMono\", \"Iosevka Term\", \"Cascadia Mon
 const SVG_DEFAULT_BACKGROUND_FILL = "#161618"
 const SVG_DEFAULT_TEXT_FILL = "#f4f6f7"
 
+"""
+    render_svg(fig; cell_width=8, line_height=16, padding=8, font_family=SVG_DEFAULT_FONT_FAMILY)
+
+Render a figure to an SVG string.
+
+The SVG renderer reuses TermPlot's text layout and ANSI styling, mapping it to
+SVG text spans on a dark background.
+
+# Keywords
+
+- `cell_width`: horizontal size of one terminal cell in SVG user units
+- `line_height`: vertical line advance in SVG user units
+- `padding`: outer padding around the rendered text block
+- `font_family`: monospace SVG font stack
+"""
 function render_svg(
     fig::Figure;
     cell_width::Int=8,
@@ -21,6 +36,13 @@ function render_svg(
     String(take!(buffer))
 end
 
+"""
+    render_svg!(io, fig; cell_width=8, line_height=16, padding=8, font_family=SVG_DEFAULT_FONT_FAMILY)
+
+Render a figure as SVG to an arbitrary `IO` stream.
+
+Accepts the same keyword arguments as `render_svg`.
+"""
 function render_svg!(
     io::IO,
     fig::Figure;

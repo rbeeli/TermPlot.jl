@@ -28,26 +28,11 @@ hline!(fig, 5.0; color=:gray, label="Reference")
 display(fig)
 ```
 
-## Public API
+## Guides
 
-- `Figure`
-- `GridSeam`
-- `GridLayout`
-- `panel!`
-- `line!`
-- `stem!`
-- `bar!`
-- `scatter!`
-- `stackedbar!`
-- `hline!`
-- `vline!`
-- `xlims!`
-- `ylims!`
-- `yscale!`
-- `render`
-- `render!`
-- `render_svg`
-- `render_svg!`
+- [Concepts](concepts.md): `Figure`, `Panel`, current-panel behavior, spans, and layout placement rules
+- [API Reference](api.md): public constructors, plotting primitives, axis mutators, and keyword parameters
+- [Rendering Output](rendering.md): plain-text rendering, `IO` usage, color control, and SVG export hooks
 
 ## Examples
 
@@ -60,8 +45,10 @@ The documentation includes an organized examples section with separate pages for
 - scatter plots
 - reference lines
 - axis options
+- messy data handling
 - layouts
 - labels and legends
+- SVG export
 
 ## Development
 

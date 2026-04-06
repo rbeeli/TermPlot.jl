@@ -1,6 +1,8 @@
 # Axes
 
-This page walks through axis features progressively, from the default numeric axes to labels, dates, dual axes, log scaling, and linked axes across panels.
+This page walks through axis features progressively, from the default numeric
+axes to labels, dates, date-times, dual axes, log scaling, and linked axes
+across panels.
 
 The charts below are generated during the docs build.
 
@@ -152,6 +154,140 @@ end # hide
 nothing # hide
 ```
 
+## DateTime Axes
+
+```@setup axes_datetime
+using Dates
+using TermPlot
+
+fig = Figure(title="DateTime Axis Example", width=100, height=20);
+panel!(
+    fig;
+    title="Intraday Signal",
+    xlabel="Time",
+    ylabel="Score",
+    x_date_format=dateformat"mm-dd HH:MM",
+    xfrequency=5,
+);
+
+x = [DateTime(2024, 4, 1, 9, 30) + Hour(i) for i in 0:7];
+signal = [0.15, 0.22, 0.35, 0.28, 0.42, 0.55, 0.49, 0.61];
+checks = [0.12, 0.21, 0.32, 0.31, 0.39, 0.52, 0.50, 0.58];
+
+line!(fig, x, signal; label="Signal", color=:cyan, marker=:circle);
+scatter!(fig, x, checks; label="Checks", color=:yellow, marker=:diamond);
+
+ylims!(fig, 0.0, 0.7);
+```
+
+```julia
+using Dates
+using TermPlot
+
+fig = Figure(title="DateTime Axis Example", width=100, height=20)
+panel!(
+    fig;
+    title="Intraday Signal",
+    xlabel="Time",
+    ylabel="Score",
+    x_date_format=dateformat"mm-dd HH:MM",
+    xfrequency=5,
+)
+
+x = [DateTime(2024, 4, 1, 9, 30) + Hour(i) for i in 0:7]
+signal = [0.15, 0.22, 0.35, 0.28, 0.42, 0.55, 0.49, 0.61]
+checks = [0.12, 0.21, 0.32, 0.31, 0.39, 0.52, 0.50, 0.58]
+
+line!(fig, x, signal; label="Signal", color=:cyan, marker=:circle)
+scatter!(fig, x, checks; label="Checks", color=:yellow, marker=:diamond)
+
+ylims!(fig, 0.0, 0.7)
+
+display(fig)
+```
+
+```@example axes_datetime; ansicolor=true
+withenv("NO_COLOR" => nothing) do # hide
+    render!(IOContext(stdout, :color => true), fig) # hide
+    println() # hide
+end # hide
+nothing # hide
+```
+
+## Zoned DateTime Axes
+
+```@setup axes_zoned
+using Dates
+using TimeZones
+using TermPlot
+
+fig = Figure(title="Zoned Time Axis Example", width=104, height=20);
+panel!(
+    fig;
+    title="New York Session",
+    xlabel="Time",
+    ylabel="Level",
+    x_date_format=dateformat"mm-dd HH:MM",
+    xfrequency=4,
+);
+
+x = [
+    ZonedDateTime(2024, 1, 2, 9, 30, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 11, 0, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 12, 30, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 14, 0, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 16, 0, 0, tz"America/New_York"),
+];
+levels = [100.0, 101.5, 101.0, 102.8, 103.6];
+
+line!(fig, x, levels; label="Session", color=:magenta, marker=:circle);
+ylims!(fig, 99.0, 104.5);
+```
+
+```julia
+using Dates
+using TimeZones
+using TermPlot
+
+fig = Figure(title="Zoned Time Axis Example", width=104, height=20)
+panel!(
+    fig;
+    title="New York Session",
+    xlabel="Time",
+    ylabel="Level",
+    x_date_format=dateformat"mm-dd HH:MM",
+    xfrequency=4,
+)
+
+x = [
+    ZonedDateTime(2024, 1, 2, 9, 30, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 11, 0, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 12, 30, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 14, 0, 0, tz"America/New_York"),
+    ZonedDateTime(2024, 1, 2, 16, 0, 0, tz"America/New_York"),
+]
+levels = [100.0, 101.5, 101.0, 102.8, 103.6]
+
+line!(fig, x, levels; label="Session", color=:magenta, marker=:circle)
+ylims!(fig, 99.0, 104.5)
+
+display(fig)
+```
+
+```@example axes_zoned; ansicolor=true
+withenv("NO_COLOR" => nothing) do # hide
+    render!(IOContext(stdout, :color => true), fig) # hide
+    println() # hide
+end # hide
+nothing # hide
+```
+
+!!! note "Time Axis Rules"
+    - `Date` axes default to `yyyy-mm-dd` formatting.
+    - `DateTime` axes default to `yyyy-mm-dd HH:MM` formatting.
+    - Mixed `Date` and `DateTime` inputs on one x-axis are promoted to a `DateTime` axis.
+    - `ZonedDateTime` tick labels are formatted in the timezone inferred from the first zoned x value on that axis.
+
 ## Dual Y-Axis
 
 ```@setup axes_dual
@@ -276,6 +412,9 @@ end # hide
 nothing # hide
 ```
 
+`log10` y-axes require positive visible limits and positive plotted values on
+that y-side.
+
 ## Linked Axes Across Panels
 
 ```@setup axes_linked
@@ -319,3 +458,10 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
+
+!!! note "Linked Axis Rules And Caveats"
+    - `linkx=true` shares one x context and one x range across all panels.
+    - Linked categorical x-axes merge categories across panels before limits are computed.
+    - `linky=true` links the left and right y-sides separately.
+    - Only panels with real data on a y-side, or explicit limits on that side, participate in that shared y range.
+    - Linked y-axes on the same side must use identical scales. Mixing `:linear` and `:log10` on one linked side raises an error.

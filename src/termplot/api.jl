@@ -1,3 +1,28 @@
+"""
+    panel!(fig, row=1, col=1; title="", xlabel="", ylabel="", ylabel_right="", xfrequency=6, yfrequency=6, xscale=:linear, yscale=:linear, y2scale=:linear, x_date_format=nothing)
+
+Create or replace a panel in a figure and make it the current panel.
+
+`row` and `col` can be integers or contiguous ranges, which allows a panel to
+span multiple grid cells.
+
+If the placement exactly matches an existing panel, that panel is replaced. A
+partially overlapping placement raises an error.
+
+# Keywords
+
+- `title`: panel title
+- `xlabel`: bottom x-axis label
+- `ylabel`: left y-axis label
+- `ylabel_right`: right y-axis label
+- `xfrequency`: target x tick density
+- `yfrequency`: target y tick density for both y sides
+- `xscale`: currently `:linear`
+- `yscale`: `:linear` or `:log10` for the left y-axis
+- `y2scale`: `:linear` or `:log10` for the right y-axis
+- `x_date_format`: optional `DateFormat` for `Date`, `DateTime`, and
+  `ZonedDateTime` x-axis ticks
+"""
 function panel!(
     fig::Figure,
     row::Union{Int,UnitRange{Int}}=1,
@@ -65,30 +90,79 @@ function Base.getindex(fig::Figure, rows::UnitRange{Int}, cols::UnitRange{Int}):
     fig.placements[placement].panel
 end
 
+"""
+    line!(target, x, y; kwargs...)
+
+Add a line series to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as `Line`.
+"""
 function line!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Line(x, y; kwargs...))
 end
 
+"""
+    stem!(target, x, y; kwargs...)
+
+Add a stem series to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as `Stem`.
+"""
 function stem!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Stem(x, y; kwargs...))
 end
 
+"""
+    scatter!(target, x, y; kwargs...)
+
+Add a scatter series to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as `Scatter`.
+"""
 function scatter!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Scatter(x, y; kwargs...))
 end
 
+"""
+    bar!(target, x, y; kwargs...)
+
+Add a bar series to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as the single-series `Bar` constructor.
+"""
 function bar!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Bar(x, y; kwargs...))
 end
 
+"""
+    stackedbar!(target, x, ys...; kwargs...)
+
+Add a stacked bar series to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as the stacked `Bar` constructor.
+"""
 function stackedbar!(target::Union{Figure,Panel}, x::AbstractVector, ys::AbstractVector...; kwargs...)
     push!(currentpanel(target), Bar(x, ys...; kwargs...))
 end
 
+"""
+    hline!(target, y; kwargs...)
+
+Add a horizontal reference line to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as `HLine`.
+"""
 function hline!(target::Union{Figure,Panel}, y::Real; kwargs...)
     push!(currentpanel(target), HLine(y; kwargs...))
 end
 
+"""
+    vline!(target, x; kwargs...)
+
+Add a vertical reference line to a `Figure` or `Panel`.
+
+Accepts the same keyword arguments as `VLine`.
+"""
 function vline!(target::Union{Figure,Panel}, x; kwargs...)
     push!(currentpanel(target), VLine(x; kwargs...))
 end
@@ -96,12 +170,32 @@ end
 _validate_axis_limit_value(value::Real, axis_name::AbstractString) = isfinite(Float64(value)) ? value : throw(ArgumentError("$(axis_name) limits must be finite"))
 _validate_axis_limit_value(value, ::AbstractString) = value
 
+"""
+    xlims!(target, lower, upper)
+
+Set explicit x-axis limits on a `Figure` or `Panel`.
+
+Numeric limits must be finite. Date/time and categorical limits should use the
+same value family as the plotted x data.
+"""
 function xlims!(target::Union{Figure,Panel}, lower, upper)
     panel = currentpanel(target)
     panel.xaxis.limits = (_validate_axis_limit_value(lower, "x-axis"), _validate_axis_limit_value(upper, "x-axis"))
     target
 end
 
+"""
+    ylims!(target, lower, upper; yside=:left)
+
+Set explicit left or right y-axis limits on a `Figure` or `Panel`.
+
+`yside` must be `:left`, `:right`, `1`, or `2`. Limits must be finite real
+values.
+
+# Keywords
+
+- `yside`: `:left`, `:right`, `1`, or `2`
+"""
 function ylims!(target::Union{Figure,Panel}, lower::Real, upper::Real; yside::Union{Symbol,Integer}=:left)
     axis = yside_symbol(yside) === :right ? currentpanel(target).yaxis_right : currentpanel(target).yaxis_left
     axis.limits = (
@@ -111,6 +205,18 @@ function ylims!(target::Union{Figure,Panel}, lower::Real, upper::Real; yside::Un
     target
 end
 
+"""
+    yscale!(target, scale; yside=:left)
+
+Set the y-axis scale for the left or right side of a `Figure` or `Panel`.
+
+`scale` must be `:linear` or `:log10`. `yside` must be `:left`, `:right`, `1`,
+or `2`.
+
+# Keywords
+
+- `yside`: `:left`, `:right`, `1`, or `2`
+"""
 function yscale!(target::Union{Figure,Panel}, scale::Symbol; yside::Union{Symbol,Integer}=:left)
     _validate_scale(scale, :y)
     axis = yside_symbol(yside) === :right ? currentpanel(target).yaxis_right : currentpanel(target).yaxis_left
@@ -118,6 +224,14 @@ function yscale!(target::Union{Figure,Panel}, scale::Symbol; yside::Union{Symbol
     target
 end
 
+"""
+    render(fig)
+
+Render a figure to a string using the current color policy.
+
+This follows the same plain-text rendering path as `render!` and `show` for
+`MIME"text/plain"`.
+"""
 function render(fig::Figure)::String
     buffer = IOBuffer()
     io = IOContext(buffer, :color => _color_enabled(stdout))
@@ -125,6 +239,14 @@ function render(fig::Figure)::String
     String(take!(buffer))
 end
 
+"""
+    render!(io, fig)
+
+Render a figure to an arbitrary `IO` stream.
+
+Use `IOContext(io, :color => false)` to suppress ANSI colors or
+`IOContext(io, :color => true)` to force them.
+"""
 function render!(io::IO, fig::Figure)
     write(io, join(_render_lines(fig, io), '\n'))
     nothing

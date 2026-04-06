@@ -14,6 +14,9 @@ const DEPLOY_REPO = "github.com/rbeeli/TermPlot.jl.git"
 
 pages = [
     "Home" => "index.md",
+    "Concepts" => "concepts.md",
+    "API Reference" => "api.md",
+    "Rendering Output" => "rendering.md",
     "Examples" => [
         "Line Charts" => "examples/line.md",
         "Stem Plots" => "examples/stems.md",
@@ -22,6 +25,7 @@ pages = [
         "Scatter Plots" => "examples/scatter.md",
         "Reference Lines" => "examples/reference_lines.md",
         "Axes" => "examples/axes.md",
+        "Messy Data" => "examples/messy_data.md",
         "Layouts" => "examples/layouts.md",
         "Labels And Legends" => "examples/labels_legends.md",
         "SVG Export" => "examples/svg.md",
