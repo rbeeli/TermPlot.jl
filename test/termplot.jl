@@ -68,6 +68,19 @@ end
     @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; step=:bad)
 end
 
+@testitem "yside validation rejects typo symbols and invalid integers" setup = [TermPlotSetup] begin
+    fig = Figure(; width=60, height=16)
+    panel!(fig; xlabel="x", ylabel="y", ylabel_right="y2")
+
+    @test_throws ArgumentError line!(fig, 1:2, [1.0, 2.0]; yside=:rihgt)
+    @test_throws ArgumentError stem!(fig, 1:2, [1.0, 2.0]; yside=3)
+    @test_throws ArgumentError scatter!(fig, 1:2, [1.0, 2.0]; yside=:centre)
+    @test_throws ArgumentError bar!(fig, ["A"], [1.0]; yside=0)
+    @test_throws ArgumentError hline!(fig, 1.0; yside=:wrong)
+    @test_throws ArgumentError ylims!(fig, 0.0, 1.0; yside=9)
+    @test_throws ArgumentError yscale!(fig, :linear; yside=:bad)
+end
+
 @testitem "stem plots render and include the baseline in y limits" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel = panel!(fig; title="Stem", xlabel="Bucket", ylabel="Signal")
@@ -245,6 +258,29 @@ end
     @test occursin("Momentum", text)
     @test occursin("Carry", text)
     @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
+end
+
+@testitem "missing-only bars do not create fake y data or linked y contamination" setup = [TermPlotSetup] begin
+    empty_fig = Figure(; width=60, height=14, legend=false)
+    empty_panel = panel!(empty_fig; xlabel="x", ylabel="y")
+    bar!(empty_fig, ["A", "B"], [missing, missing]; label="Empty", color=:cyan)
+
+    empty_scan = TermPlot._scan_panel(empty_panel)
+
+    @test !empty_scan.has_left_data
+    @test empty_scan.yleft_limits == (0.0, 1.0)
+
+    linked = Figure(GridLayout(1, 2); width=84, height=16, linky=true, legend=false)
+    left = panel!(linked, 1, 1; xlabel="x", ylabel="y")
+    right = panel!(linked, 1, 2; xlabel="x", ylabel="y")
+    line!(left, 1:3, [100.0, 150.0, 200.0]; color=:yellow)
+    bar!(right, ["A", "B"], [missing, missing]; color=:cyan)
+
+    left_scan = TermPlot._scan_panel(left)
+    right_scan = TermPlot._scan_panel(right)
+    shared_left = TermPlot._combine_shared_y([left_scan, right_scan], linked.placements, :left)
+
+    @test shared_left == left_scan.yleft_limits
 end
 
 @testitem "missing and non-finite values do not error" setup = [TermPlotSetup] begin

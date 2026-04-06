@@ -251,8 +251,16 @@ function normalize_marker(marker::AbstractString)::Char
     throw(ArgumentError("marker must be a predefined name or a single character"))
 end
 
-yside_symbol(yside::Symbol) = yside
-yside_symbol(yside::Integer) = yside == 2 ? :right : :left
+function yside_symbol(yside::Symbol)::Symbol
+    yside in (:left, :right) || throw(ArgumentError("yside must be :left, :right, 1, or 2"))
+    yside
+end
+
+function yside_symbol(yside::Integer)::Symbol
+    yside == 1 && return :left
+    yside == 2 && return :right
+    throw(ArgumentError("yside must be :left, :right, 1, or 2"))
+end
 
 function Line(
     x::AbstractVector,

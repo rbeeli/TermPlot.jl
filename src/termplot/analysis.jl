@@ -157,16 +157,19 @@ function _scan_series!(scan::PanelScanAccumulator, panel::Panel, xcontext::XCont
         _append_bar_span_xvalues!(scan.xvalues, x, half_width)
         pos_total = 0.0
         neg_total = 0.0
+        has_bar_value = false
         for stack in series.ys
             y = _finite_y(stack[bar_ix])
             isfinite(y) || continue
             _check_y_valid(y, yaxis)
+            has_bar_value = true
             if y >= 0.0
                 pos_total += y
             else
                 neg_total += y
             end
         end
+        has_bar_value || continue
         push!(axis_values, pos_total)
         push!(axis_values, neg_total)
         has_sample = true
