@@ -768,17 +768,14 @@ function _x_tick_line(
     tick_labels::Vector{String},
     chrome::PanelChrome,
 )::String
-    chars = fill(' ', _left_decoration_width(left_width, chrome) + plot_width + _right_decoration_width(right_width, chrome))
+    line_width = _left_decoration_width(left_width, chrome) + plot_width + _right_decoration_width(right_width, chrome)
+    cells = fill(" ", line_width)
     plot_offset = _left_decoration_width(left_width, chrome)
     for (col, label) in zip(tick_cols, tick_labels)
-        start = plot_offset + col - fld(textwidth(label), 2)
-        start = _tick_label_start(col, label, length(chars), plot_offset)
-        for (offset, ch) in enumerate(label)
-            pos = start + offset - 1
-            pos <= length(chars) && (chars[pos] = ch)
-        end
+        start = _tick_label_start(col, label, line_width, plot_offset)
+        _write_text_cells!(cells, start, label)
     end
-    String(chars)
+    join(cells)
 end
 
 function _x_tick_positions(
@@ -877,6 +874,24 @@ end
 
 function _take_textwidth_prefix(text::AbstractString, width::Int)::String
     first(_split_textwidth_prefix(text, width))
+end
+
+function _write_text_cells!(cells::Vector{String}, start::Int, text::AbstractString)
+    pos = start
+    for grapheme in Base.Unicode.graphemes(text)
+        grapheme_width = textwidth(grapheme)
+        grapheme_width <= 0 && continue
+        pos > length(cells) && break
+        clipped = _take_textwidth_prefix(grapheme, length(cells) - pos + 1)
+        isempty(clipped) && break
+        clipped_width = textwidth(clipped)
+        cells[pos] = clipped
+        for cell_ix in (pos + 1):min(pos + clipped_width - 1, length(cells))
+            cells[cell_ix] = ""
+        end
+        pos += clipped_width
+    end
+    nothing
 end
 
 function _ansi_text(text::AbstractString, color::Symbol)::String

@@ -6,7 +6,7 @@ function _render_plot_canvas(prepared::PreparedPanel, plot_width::Int, plot_heig
     fill_colors = fill(nothing, plot_height, plot_width)
     guides = fill('\0', plot_height, plot_width)
     guide_colors = fill(nothing, plot_height, plot_width)
-    overlays = fill('\0', plot_height, plot_width)
+    overlays = fill("", plot_height, plot_width)
     overlay_colors = fill(nothing, plot_height, plot_width)
     canvas = PlotCanvas(masks, mask_colors, mask_color_layers, fills, fill_colors, guides, guide_colors, overlays, overlay_colors)
 
@@ -185,10 +185,19 @@ function _draw_series_marker!(
     plot_height::Int,
     color::Symbol,
 )
-    cell_col = clamp(fld(point[1], 2) + 1, 1, plot_width)
+    marker_text = _take_textwidth_prefix(string(marker), plot_width)
+    isempty(marker_text) && return
+    marker_width = max(textwidth(marker_text), 1)
+    cell_col = clamp(fld(point[1], 2) + 1, 1, max(plot_width - marker_width + 1, 1))
     cell_row = clamp(fld(point[2], 4) + 1, 1, plot_height)
-    canvas.overlays[cell_row, cell_col] = marker
+    marker_last_col = min(cell_col + marker_width - 1, plot_width)
+    _clear_overlay_range!(canvas, cell_row, cell_col, marker_last_col)
+    canvas.overlays[cell_row, cell_col] = marker_text
     canvas.overlay_colors[cell_row, cell_col] = color
+    for col in (cell_col + 1):marker_last_col
+        canvas.overlays[cell_row, col] = ""
+        canvas.overlay_colors[cell_row, col] = color
+    end
     nothing
 end
 
@@ -324,27 +333,63 @@ end
 function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::String
     io = IOBuffer()
     active = nothing
-    for col in axes(canvas.masks, 2)
-        ch, color = _plot_cell(canvas, row, col)
+    col = first(axes(canvas.masks, 2))
+    last_col = last(axes(canvas.masks, 2))
+    while col <= last_col
+        _overlay_is_continuation(canvas, row, col) && (col += 1; continue)
+        text, color, advance = _plot_cell(canvas, row, col)
         if color_enabled
             active = _write_color_transition!(io, active, color)
         end
-        write(io, ch)
+        write(io, text)
+        col += advance
     end
     color_enabled && !isnothing(active) && write(io, "\e[0m")
     String(take!(io))
 end
 
-function _plot_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{Char,Union{Nothing,Symbol}}
-    if canvas.overlays[row, col] != '\0'
-        return canvas.overlays[row, col], canvas.overlay_colors[row, col]
+function _plot_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{String,Union{Nothing,Symbol},Int}
+    if !isnothing(canvas.overlay_colors[row, col]) && !isempty(canvas.overlays[row, col])
+        text = canvas.overlays[row, col]
+        return text, canvas.overlay_colors[row, col], max(textwidth(text), 1)
     elseif canvas.guides[row, col] != '\0'
-        return canvas.guides[row, col], canvas.guide_colors[row, col]
+        return string(canvas.guides[row, col]), canvas.guide_colors[row, col], 1
     elseif canvas.fills[row, col] != 0x00
-        return _bar_fill_char(canvas.fills[row, col]), canvas.fill_colors[row, col]
+        return string(_bar_fill_char(canvas.fills[row, col])), canvas.fill_colors[row, col], 1
     end
     mask = canvas.masks[row, col]
-    mask == 0x00 ? (' ', nothing) : (Char(0x2800 + mask), canvas.mask_colors[row, col])
+    mask == 0x00 ? (" ", nothing, 1) : (string(Char(0x2800 + mask)), canvas.mask_colors[row, col], 1)
+end
+
+_overlay_is_continuation(canvas::PlotCanvas, row::Int, col::Int) = !isnothing(canvas.overlay_colors[row, col]) && isempty(canvas.overlays[row, col])
+
+function _clear_overlay_range!(canvas::PlotCanvas, row::Int, col_lo::Int, col_hi::Int)
+    ncols = size(canvas.overlays, 2)
+    start = clamp(col_lo, 1, ncols)
+    stop = clamp(col_hi, 1, ncols)
+    while start > 1 && _overlay_is_continuation(canvas, row, start)
+        start -= 1
+    end
+
+    col = start
+    while col <= stop
+        if isnothing(canvas.overlay_colors[row, col])
+            col += 1
+            continue
+        elseif isempty(canvas.overlays[row, col])
+            col += 1
+            continue
+        end
+
+        overlay_width = max(textwidth(canvas.overlays[row, col]), 1)
+        overlay_stop = min(col + overlay_width - 1, ncols)
+        for clear_col in col:overlay_stop
+            canvas.overlays[row, clear_col] = ""
+            canvas.overlay_colors[row, clear_col] = nothing
+        end
+        col = overlay_stop + 1
+    end
+    nothing
 end
 
 function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol)

@@ -320,6 +320,28 @@ end
     @test occursin("points", text)
 end
 
+@testitem "wide tick labels and markers preserve terminal and SVG width" setup = [TermPlotSetup] begin
+    bars = Figure(; width=40, height=16, legend=false)
+    panel!(bars; xlabel="Bucket", ylabel="Score")
+    bar!(bars, ["界", "海"], [0.8, 0.6]; color=:cyan)
+    ylims!(bars, 0, 1)
+
+    bar_lines = split(TermPlot._strip_ansi(render(bars)), '\n')
+    @test all(textwidth(line) == 40 for line in bar_lines)
+
+    markers = Figure(; width=40, height=16, legend=false)
+    panel!(markers; xlabel="Bucket", ylabel="Score")
+    line!(markers, 1:4, [1.0, 2.0, 1.5, 3.0]; color=:yellow, marker='🐱')
+
+    marker_text = TermPlot._strip_ansi(render(markers))
+    marker_lines = split(marker_text, '\n')
+    svg = TermPlot.render_svg(markers)
+
+    @test all(textwidth(line) == 40 for line in marker_lines)
+    @test count(==('🐱'), marker_text) >= 1
+    @test occursin("width=\"336\"", svg)
+end
+
 @testitem "braille cells keep the dominant line color at crossings" setup = [TermPlotSetup] begin
     canvas = TermPlot.PlotCanvas(
         fill(UInt8(0), 1, 1),
@@ -329,7 +351,7 @@ end
         fill(nothing, 1, 1),
         fill('\0', 1, 1),
         fill(nothing, 1, 1),
-        fill('\0', 1, 1),
+        fill("", 1, 1),
         fill(nothing, 1, 1),
     )
     canvas.mask_colors[1, 1] = nothing
@@ -356,7 +378,7 @@ end
         fill(nothing, 1, 1),
         fill('\0', 1, 1),
         fill(nothing, 1, 1),
-        fill('\0', 1, 1),
+        fill("", 1, 1),
         fill(nothing, 1, 1),
     )
     canvas.mask_colors[1, 1] = nothing

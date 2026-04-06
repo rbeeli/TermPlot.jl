@@ -125,3 +125,60 @@ withenv("NO_COLOR" => nothing) do # hide
 end # hide
 nothing # hide
 ```
+
+## Wide Unicode Labels And Markers
+
+This example keeps a fixed figure width while using width-2 Unicode glyphs in
+both categorical x labels and point markers.
+
+```@setup labels_legends_unicode
+using TermPlot
+
+fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=64, height=24, legend=false);
+
+top = panel!(fig, 1, 1; title="Wide Marker", xlabel="Bucket", ylabel="Signal");
+bottom = panel!(fig, 2, 1; title="Wide Labels", xlabel="Category", ylabel="Score");
+
+line!(top, 1:5, [0.3, 0.7, 0.5, 0.9, 0.8]; color=:cyan, marker='🐱');
+
+bar!(
+    bottom,
+    ["界", "海", "山", "空"],
+    [0.72, 0.58, 0.81, 0.66];
+    color=:yellow,
+    width=0.78,
+);
+
+ylims!(bottom, 0, 1);
+```
+
+```julia
+using TermPlot
+
+fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=64, height=24, legend=false)
+
+top = panel!(fig, 1, 1; title="Wide Marker", xlabel="Bucket", ylabel="Signal")
+bottom = panel!(fig, 2, 1; title="Wide Labels", xlabel="Category", ylabel="Score")
+
+line!(top, 1:5, [0.3, 0.7, 0.5, 0.9, 0.8]; color=:cyan, marker='🐱')
+
+bar!(
+    bottom,
+    ["界", "海", "山", "空"],
+    [0.72, 0.58, 0.81, 0.66];
+    color=:yellow,
+    width=0.78,
+)
+
+ylims!(bottom, 0, 1)
+
+display(fig)
+```
+
+```@example labels_legends_unicode; ansicolor=true
+withenv("NO_COLOR" => nothing) do # hide
+    render!(IOContext(stdout, :color => true), fig) # hide
+    println() # hide
+end # hide
+nothing # hide
+```

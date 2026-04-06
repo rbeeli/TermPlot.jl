@@ -216,7 +216,7 @@ struct PlotCanvas
     fill_colors::Matrix{Union{Nothing,Symbol}}
     guides::Matrix{Char}
     guide_colors::Matrix{Union{Nothing,Symbol}}
-    overlays::Matrix{Char}
+    overlays::Matrix{String}
     overlay_colors::Matrix{Union{Nothing,Symbol}}
 end
 
