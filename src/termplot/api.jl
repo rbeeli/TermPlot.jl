@@ -297,6 +297,7 @@ Render a figure to an arbitrary `IO` stream.
 
 Use `IOContext(io, :color => false)` to suppress ANSI colors or
 `IOContext(io, :color => true)` to force them.
+An explicit `:color` setting takes precedence over `NO_COLOR`.
 """
 function render!(io::IO, fig::Figure)
     write(io, join(_render_lines(fig, io), '\n'))

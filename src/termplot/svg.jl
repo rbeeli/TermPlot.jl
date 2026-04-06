@@ -136,6 +136,8 @@ function Base.show(io::IO, ::MIME"image/svg+xml", fig::Figure)
     render_svg!(io, fig)
 end
 
+Base.showable(::MIME"image/svg+xml", ::Figure) = false
+
 function _svg_runs(line::AbstractString)
     runs = NamedTuple{(:text, :fill, :bold),Tuple{String,Union{Nothing,String},Bool}}[]
     buffer = IOBuffer()

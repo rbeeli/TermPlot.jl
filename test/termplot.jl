@@ -825,6 +825,14 @@ end
         color_text = String(take!(color_buffer))
         @test occursin("\e[", color_text)
     end
+
+    withenv("NO_COLOR" => "1") do
+        color_buffer = IOBuffer()
+        color_io = IOContext(color_buffer, :color => true)
+        render!(color_io, fig)
+        color_text = String(take!(color_buffer))
+        @test occursin("\e[", color_text)
+    end
 end
 
 @testitem "svg renderer serializes styled text output with colors" setup = [TermPlotSetup] begin
@@ -850,6 +858,8 @@ end
     @test !occursin("\e[", svg)
     @test occursin("<rect width=\"100%\" height=\"100%\" fill=\"#010203\"/>", themed)
     @test occursin("font-size=\"14\" fill=\"#abcdef\"", themed)
+    @test !showable(MIME"image/svg+xml"(), fig)
+    @test showable(MIME"text/plain"(), fig)
     @test String(take!(buffer)) == svg
     @test String(take!(shown)) == svg
 end

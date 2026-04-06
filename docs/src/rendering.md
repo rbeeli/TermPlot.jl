@@ -3,7 +3,7 @@
 `TermPlot.jl` has two output paths:
 
 - terminal text via `render`, `render!`, `show(fig)`, `display(fig)`, and `show(::MIME"text/plain", ...)`
-- SVG via `render_svg`, `render_svg!`, and `show(::MIME"image/svg+xml", ...)`
+- SVG via `render_svg`, `render_svg!`, and explicit `show(::MIME"image/svg+xml", ...)`
 
 Both renderers share the same plot layout and rasterization, so the SVG output
 tracks the terminal output closely.
@@ -70,6 +70,7 @@ render!(IOContext(ansi, :color => true), fig)
 
 Use `:color => false` when you need plain logs or deterministic snapshots. Use
 `:color => true` when the destination understands ANSI escape sequences.
+Explicit `:color` takes precedence over `NO_COLOR`.
 
 ## Display Integration
 
@@ -81,15 +82,14 @@ display(fig)
 show(stdout, MIME"text/plain"(), fig)
 ```
 
-In notebook-style or rich display environments, the SVG `show` method is also
-available:
+`TermPlot.jl` does not advertise SVG as an automatic display preference.
+That keeps `display(fig)` on the terminal-text path even in rich frontends.
+
+SVG output is available only when you request it explicitly:
 
 ```julia
 show(stdout, MIME"image/svg+xml"(), fig)
 ```
-
-If the environment requests SVG display automatically, it can use that MIME
-path without any extra wrapper type.
 
 ## SVG Rendering
 

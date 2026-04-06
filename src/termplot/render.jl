@@ -818,7 +818,10 @@ end
 function _color_enabled(io::IO)::Bool
     forced = get(io, :termplot_color_enabled, nothing)
     !isnothing(forced) && return forced
-    get(io, :color, false) && get(ENV, "NO_COLOR", "") == ""
+    color_pref = get(io, :color, nothing)
+    !isnothing(color_pref) && return Bool(color_pref)
+    get(ENV, "NO_COLOR", "") != "" && return false
+    false
 end
 
 function _center_text(text::AbstractString, width::Int)::String
