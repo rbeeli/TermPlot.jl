@@ -55,36 +55,16 @@ display(fig)
 
 Browse the full docs at <https://rbeeli.github.io/TermPlot.jl/>.
 
-`GridLayout` and `GridSeam` power the multi-panel layout system:
-
-```julia
-grid = GridLayout(
-    2,
-    3;
-    rowweights=[2, 1],
-    colweights=[2, 1, 1],
-    rowseams=GridSeam(; gap=1),
-    colseams=[GridSeam(:adjacent), GridSeam(; gap=2)],
-    rowaligns=:all,
-    colaligns=[:main, :main, :side],
-)
-fig = Figure(grid; width=112, height=26)
-main = panel!(fig, 1, 1:2; title="Main")
-side = panel!(fig, 1:2, 3; title="Side")
-lower = panel!(fig, 2, 1:2; title="Lower")
-```
-
-Examples live in the docs under `docs/src/examples/`, split by use case rather than duplicated as root-level scripts.
-
-Repository layout:
-
-- `src/`: package source
-- `test/`: generic package tests
-- `docs/`: DocumenterVitepress setup and organized examples
-
 ## Development
+
+Run tests with:
 
 ```bash
 julia --project -e 'using Pkg; Pkg.test()'
+```
+
+Build docs with:
+
+```bash
 julia --project=docs docs/makedocs.jl
 ```

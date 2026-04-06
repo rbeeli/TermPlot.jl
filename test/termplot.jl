@@ -287,6 +287,26 @@ end
     @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
 end
 
+@testitem "categorical x limits restrict visible x tick labels" setup = [TermPlotSetup] begin
+    fig = Figure(; width=60, height=16, legend=false)
+    panel = panel!(fig; xlabel="Bucket", ylabel="Score")
+    bar!(fig, ["A", "B", "C", "D"], [1.0, 2.0, 3.0, 4.0]; color=:cyan)
+    xlims!(fig, "B", "C")
+
+    scan = TermPlot._scan_panel(panel)
+    ticks = TermPlot._x_ticks(panel.xaxis, scan.xcontext, scan.xlimits)
+    labels = TermPlot._format_x_ticks(ticks, scan.xcontext, panel.xaxis.date_format)
+    lines = split(TermPlot._strip_ansi(render(fig)), '\n')
+    tick_line = findfirst(line -> occursin("B", line) || occursin("C", line), lines)
+
+    @test labels == ["B", "C"]
+    @test !isnothing(tick_line)
+    @test occursin("B", lines[tick_line])
+    @test occursin("C", lines[tick_line])
+    @test !occursin("A", lines[tick_line])
+    @test !occursin("D", lines[tick_line])
+end
+
 @testitem "missing-only bars do not create fake y data or linked y contamination" setup = [TermPlotSetup] begin
     empty_fig = Figure(; width=60, height=14, legend=false)
     empty_panel = panel!(empty_fig; xlabel="x", ylabel="y")

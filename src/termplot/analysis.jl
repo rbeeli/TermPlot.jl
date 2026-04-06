@@ -333,7 +333,8 @@ end
 
 function _x_ticks(axis::Axis, xcontext::XContext, limits::Tuple{Float64,Float64})::Vector{Float64}
     if xcontext.kind == :categorical
-        return [Float64(i) for i in eachindex(xcontext.categories)]
+        lo, hi = limits
+        return [Float64(i) for i in eachindex(xcontext.categories) if lo <= i <= hi]
     end
     _nice_ticks(limits[1], limits[2], axis.tick_count)
 end
