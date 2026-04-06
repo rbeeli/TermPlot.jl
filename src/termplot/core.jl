@@ -318,6 +318,12 @@ function Stem(
     )
 end
 
+function _normalize_bar_width(width::Real)::Float64
+    width_value = Float64(width)
+    isfinite(width_value) && width_value > 0.0 || throw(ArgumentError("bar width must be positive finite"))
+    width_value
+end
+
 function Bar(
     x::AbstractVector,
     y::AbstractVector;
@@ -332,7 +338,7 @@ function Bar(
         AbstractVector[y],
         [String(label)],
         Union{Nothing,Symbol}[normalize_color(color)],
-        Float64(width),
+        _normalize_bar_width(width),
         yside_symbol(yside),
     )
 end
@@ -355,7 +361,7 @@ function Bar(
         AbstractVector[ys...],
         String.(labels),
         Union{Nothing,Symbol}[normalize_color(color) for color in colors],
-        Float64(width),
+        _normalize_bar_width(width),
         yside_symbol(yside),
     )
 end

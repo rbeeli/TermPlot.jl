@@ -93,15 +93,21 @@ function vline!(target::Union{Figure,Panel}, x; kwargs...)
     push!(currentpanel(target), VLine(x; kwargs...))
 end
 
+_validate_axis_limit_value(value::Real, axis_name::AbstractString) = isfinite(Float64(value)) ? value : throw(ArgumentError("$(axis_name) limits must be finite"))
+_validate_axis_limit_value(value, ::AbstractString) = value
+
 function xlims!(target::Union{Figure,Panel}, lower, upper)
     panel = currentpanel(target)
-    panel.xaxis.limits = (lower, upper)
+    panel.xaxis.limits = (_validate_axis_limit_value(lower, "x-axis"), _validate_axis_limit_value(upper, "x-axis"))
     target
 end
 
 function ylims!(target::Union{Figure,Panel}, lower::Real, upper::Real; yside::Union{Symbol,Integer}=:left)
     axis = yside_symbol(yside) === :right ? currentpanel(target).yaxis_right : currentpanel(target).yaxis_left
-    axis.limits = (Float64(lower), Float64(upper))
+    axis.limits = (
+        Float64(_validate_axis_limit_value(lower, "y-axis")),
+        Float64(_validate_axis_limit_value(upper, "y-axis")),
+    )
     target
 end
 

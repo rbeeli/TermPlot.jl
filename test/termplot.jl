@@ -81,6 +81,18 @@ end
     @test_throws ArgumentError yscale!(fig, :linear; yside=:bad)
 end
 
+@testitem "public geometry setters and bar widths reject invalid values" setup = [TermPlotSetup] begin
+    fig = Figure(; width=60, height=16)
+    panel!(fig; xlabel="x", ylabel="y")
+
+    @test_throws ArgumentError xlims!(fig, -Inf, Inf)
+    @test_throws ArgumentError xlims!(fig, NaN, 1.0)
+    @test_throws ArgumentError ylims!(fig, -Inf, Inf)
+    @test_throws ArgumentError ylims!(fig, NaN, 1.0)
+    @test_throws ArgumentError bar!(fig, ["A"], [1.0]; width=NaN)
+    @test_throws ArgumentError bar!(fig, ["A"], [1.0]; width=0.0)
+end
+
 @testitem "stem plots render and include the baseline in y limits" setup = [TermPlotSetup] begin
     fig = Figure(; width=84, height=18)
     panel = panel!(fig; title="Stem", xlabel="Bucket", ylabel="Signal")
