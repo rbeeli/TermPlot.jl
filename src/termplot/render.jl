@@ -819,6 +819,8 @@ function _resolve_terminal_width(io::IO, width::Union{Nothing,Int})
 end
 
 function _color_enabled(io::IO)::Bool
+    forced = get(io, :termplot_color_enabled, nothing)
+    !isnothing(forced) && return forced
     get(io, :color, false) && get(ENV, "NO_COLOR", "") == ""
 end
 

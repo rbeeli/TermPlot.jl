@@ -32,6 +32,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 - flexible axis options
 - seam-aware `GridLayout` with weighted rows, weighted columns, spanning panels, adjacent subplots, and optional row/column plot alignment groups
 - rendering to any `IO`
+- SVG export via `render_svg` / `render_svg!`
 - graceful handling of missing and non-finite data
 
 ## Quick Example

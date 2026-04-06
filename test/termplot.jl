@@ -703,6 +703,30 @@ end
     end
 end
 
+@testitem "svg renderer serializes styled text output with colors" setup = [TermPlotSetup] begin
+    fig = Figure(; width=40, height=16, title="T <>&")
+    panel!(fig; title="Panel", xlabel="x", ylabel="y")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series", color=:cyan, marker=:diamond)
+    hline!(fig, 1.5; label="Ref", color=:gray)
+
+    svg = TermPlot.render_svg(fig)
+    buffer = IOBuffer()
+    TermPlot.render_svg!(buffer, fig)
+    shown = IOBuffer()
+    show(shown, MIME"image/svg+xml"(), fig)
+
+    @test occursin("<svg", svg)
+    @test occursin("JuliaMono", svg)
+    @test occursin("<rect width=\"100%\" height=\"100%\" fill=\"#161618\"/>", svg)
+    @test occursin("font-size=\"14\" fill=\"#f4f6f7\"", svg)
+    @test occursin("fill=\"#138d90\"", svg)
+    @test occursin("font-weight=\"700\"", svg)
+    @test occursin("T &lt;&gt;&amp;", svg)
+    @test !occursin("\e[", svg)
+    @test String(take!(buffer)) == svg
+    @test String(take!(shown)) == svg
+end
+
 @testitem "long legend items wrap within width and styled centering clips" setup = [TermPlotSetup] begin
     fig = Figure(; width=40, height=16)
     panel!(fig; xlabel="x", ylabel="y")

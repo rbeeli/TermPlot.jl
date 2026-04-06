@@ -46,6 +46,8 @@ display(fig)
 - `yscale!`
 - `render`
 - `render!`
+- `render_svg`
+- `render_svg!`
 
 ## Examples
 

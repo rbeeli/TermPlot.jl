@@ -15,7 +15,6 @@ const DEPLOY_REPO = "github.com/rbeeli/TermPlot.jl.git"
 pages = [
     "Home" => "index.md",
     "Examples" => [
-        "Overview" => "examples/index.md",
         "Line Charts" => "examples/line.md",
         "Stem Plots" => "examples/stems.md",
         "Bar Charts" => "examples/bars.md",
@@ -25,6 +24,7 @@ pages = [
         "Axes" => "examples/axes.md",
         "Layouts" => "examples/layouts.md",
         "Labels And Legends" => "examples/labels_legends.md",
+        "SVG Export" => "examples/svg.md",
     ],
 ]
 

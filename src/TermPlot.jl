@@ -27,12 +27,15 @@ export Axis,
        ylims!,
        yscale!,
        render,
-       render!
+       render!,
+       render_svg,
+       render_svg!
 
 include("termplot/core.jl")
 include("termplot/analysis.jl")
 include("termplot/draw.jl")
 include("termplot/render.jl")
+include("termplot/svg.jl")
 include("termplot/api.jl")
 
 end
