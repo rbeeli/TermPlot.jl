@@ -231,15 +231,16 @@ function _combine_shared_y(scans, placements, side::Symbol)
     for ix in eachindex(scans, placements)
         scan = scans[ix]
         placement = placements[ix]
-        axis = side === :left ? placement.panel.yaxis_left : placement.panel.yaxis_right
+        axis = _series_axis(placement.panel, side)
         has_data = side === :left ? scan.has_left_data : scan.has_right_data
         if has_data || !isnothing(axis.limits)
             push!(contributor_ixs, ix)
         end
     end
     isempty(contributor_ixs) && return nothing
-    panel = placements[first(contributor_ixs)].panel
-    scale = side === :left ? panel.yaxis_left.scale : panel.yaxis_right.scale
+    scales = unique(_series_axis(placements[ix].panel, side).scale for ix in contributor_ixs)
+    length(scales) == 1 || throw(ArgumentError("linked y-axes require identical scales on the $(side) side"))
+    scale = only(scales)
     limits = _combine_limits(
         side === :left ? (scans[ix].yleft_limits for ix in contributor_ixs) : (scans[ix].yright_limits for ix in contributor_ixs);
         scale,

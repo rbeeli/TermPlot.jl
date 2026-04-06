@@ -376,6 +376,27 @@ end
     @test shared_right == scan_right.yright_limits
 end
 
+@testitem "linked y rejects mixed scales on the same side regardless of panel order" setup = [TermPlotSetup] begin
+    function build_fig(linear_first::Bool)
+        fig = Figure(GridLayout(1, 2); width=84, height=16, linky=true, legend=false)
+        first = panel!(fig, 1, 1; xlabel="x", ylabel="y")
+        second = panel!(fig, 1, 2; xlabel="x", ylabel="y")
+        if linear_first
+            line!(first, 1:3, [0.0, 1.0, 2.0]; color=:cyan)
+            yscale!(second, :log10)
+            line!(second, 1:3, [1.0, 10.0, 100.0]; color=:yellow)
+        else
+            yscale!(first, :log10)
+            line!(first, 1:3, [1.0, 10.0, 100.0]; color=:yellow)
+            line!(second, 1:3, [0.0, 1.0, 2.0]; color=:cyan)
+        end
+        fig
+    end
+
+    @test_throws ArgumentError("linked y-axes require identical scales on the left side") render(build_fig(true))
+    @test_throws ArgumentError("linked y-axes require identical scales on the left side") render(build_fig(false))
+end
+
 @testitem "linked categorical x recomputes limits in the merged context" setup = [TermPlotSetup] begin
     fig = Figure(GridLayout(1, 2); width=84, height=16, linkx=true, legend=false)
     left = panel!(fig, 1, 1; xlabel="x", ylabel="y")
