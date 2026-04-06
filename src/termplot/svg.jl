@@ -3,7 +3,15 @@ const SVG_DEFAULT_BACKGROUND_FILL = "#161618"
 const SVG_DEFAULT_TEXT_FILL = "#f4f6f7"
 
 """
-    render_svg(fig; cell_width=8, line_height=16, padding=8, font_family=SVG_DEFAULT_FONT_FAMILY)
+    render_svg(
+        fig;
+        cell_width=8,
+        line_height=16,
+        padding=8,
+        font_family=SVG_DEFAULT_FONT_FAMILY,
+        background_fill=SVG_DEFAULT_BACKGROUND_FILL,
+        text_fill=SVG_DEFAULT_TEXT_FILL,
+    )
 
 Render a figure to an SVG string.
 
@@ -16,6 +24,8 @@ SVG text spans on a dark background.
 - `line_height`: vertical line advance in SVG user units
 - `padding`: outer padding around the rendered text block
 - `font_family`: monospace SVG font stack
+- `background_fill`: SVG fill color for the background rectangle
+- `text_fill`: default SVG fill color for unstyled text
 """
 function render_svg(
     fig::Figure;
@@ -23,6 +33,8 @@ function render_svg(
     line_height::Int=16,
     padding::Int=8,
     font_family::AbstractString=SVG_DEFAULT_FONT_FAMILY,
+    background_fill::AbstractString=SVG_DEFAULT_BACKGROUND_FILL,
+    text_fill::AbstractString=SVG_DEFAULT_TEXT_FILL,
 )::String
     buffer = IOBuffer()
     render_svg!(
@@ -32,16 +44,34 @@ function render_svg(
         line_height,
         padding,
         font_family,
+        background_fill,
+        text_fill,
     )
     String(take!(buffer))
 end
 
 """
-    render_svg!(io, fig; cell_width=8, line_height=16, padding=8, font_family=SVG_DEFAULT_FONT_FAMILY)
+    render_svg!(
+        io,
+        fig;
+        cell_width=8,
+        line_height=16,
+        padding=8,
+        font_family=SVG_DEFAULT_FONT_FAMILY,
+        background_fill=SVG_DEFAULT_BACKGROUND_FILL,
+        text_fill=SVG_DEFAULT_TEXT_FILL,
+    )
 
 Render a figure as SVG to an arbitrary `IO` stream.
 
-Accepts the same keyword arguments as `render_svg`.
+# Keywords
+
+- `cell_width`: horizontal size of one terminal cell in SVG user units
+- `line_height`: vertical line advance in SVG user units
+- `padding`: outer padding around the rendered text block
+- `font_family`: monospace SVG font stack
+- `background_fill`: SVG fill color for the background rectangle
+- `text_fill`: default SVG fill color for unstyled text
 """
 function render_svg!(
     io::IO,
@@ -50,6 +80,8 @@ function render_svg!(
     line_height::Int=16,
     padding::Int=8,
     font_family::AbstractString=SVG_DEFAULT_FONT_FAMILY,
+    background_fill::AbstractString=SVG_DEFAULT_BACKGROUND_FILL,
+    text_fill::AbstractString=SVG_DEFAULT_TEXT_FILL,
 )
     cell_width > 0 || throw(ArgumentError("cell_width must be positive"))
     line_height > 0 || throw(ArgumentError("line_height must be positive"))
@@ -69,13 +101,17 @@ function render_svg!(
     )
     write(
         io,
-        "<rect width=\"100%\" height=\"100%\" fill=\"$(SVG_DEFAULT_BACKGROUND_FILL)\"/>",
+        "<rect width=\"100%\" height=\"100%\" fill=\"",
+        _escape_xml_attr(background_fill),
+        "\"/>",
     )
     write(
         io,
         "<text xml:space=\"preserve\" font-family=\"",
         _escape_xml_attr(font_family),
-        "\" font-size=\"$(font_size)\" fill=\"$(SVG_DEFAULT_TEXT_FILL)\" dominant-baseline=\"hanging\" font-variant-ligatures=\"none\">",
+        "\" font-size=\"$(font_size)\" fill=\"",
+        _escape_xml_attr(text_fill),
+        "\" dominant-baseline=\"hanging\" font-variant-ligatures=\"none\">",
     )
 
     for (row, line) in pairs(lines)

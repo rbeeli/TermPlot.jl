@@ -26,6 +26,21 @@ end
     @test any(ch -> ch == '⠁' || ch == '⣀' || ch == '⠤' || (UInt32(ch) >= 0x2800 && UInt32(ch) <= 0x28ff), text)
 end
 
+@testitem "bare show uses the plotting renderer" setup = [TermPlotSetup] begin
+    fig = Figure(; width=60, height=16)
+    panel!(fig; title="Shown", xlabel="x", ylabel="y")
+    line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Series", color=:cyan)
+
+    buffer = IOBuffer()
+    show(buffer, fig)
+    text = String(take!(buffer))
+
+    @test occursin("Shown", text)
+    @test occursin("Series", text)
+    @test occursin("┌", text)
+    @test !occursin("Figure(", text)
+end
+
 @testitem "unicode titles and labels truncate without string indexing errors" setup = [TermPlotSetup] begin
     long = repeat("◆", 50)
     fig = Figure(; width=41, height=14, title=long, legend=false)
@@ -779,6 +794,7 @@ end
     hline!(fig, 1.5; label="Ref", color=:gray)
 
     svg = TermPlot.render_svg(fig)
+    themed = TermPlot.render_svg(fig; background_fill="#010203", text_fill="#abcdef")
     buffer = IOBuffer()
     TermPlot.render_svg!(buffer, fig)
     shown = IOBuffer()
@@ -792,6 +808,8 @@ end
     @test occursin("font-weight=\"700\"", svg)
     @test occursin("T &lt;&gt;&amp;", svg)
     @test !occursin("\e[", svg)
+    @test occursin("<rect width=\"100%\" height=\"100%\" fill=\"#010203\"/>", themed)
+    @test occursin("font-size=\"14\" fill=\"#abcdef\"", themed)
     @test String(take!(buffer)) == svg
     @test String(take!(shown)) == svg
 end

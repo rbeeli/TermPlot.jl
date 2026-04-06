@@ -95,7 +95,16 @@ end
 
 Add a line series to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as `Line`.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `step`: `:linear`, `:pre`, `:mid`, or `:post`
+- `marker`: `nothing`, a named marker (`"dot"`, `"diamond"`, `"cross"`,
+  `"square"`, `"circle"`, `"hd"`), or a single character
 """
 function line!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Line(x, y; kwargs...))
@@ -106,7 +115,16 @@ end
 
 Add a stem series to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as `Stem`.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `baseline`: finite numeric stem baseline
+- `marker`: `nothing`, a named marker (`"dot"`, `"diamond"`, `"cross"`,
+  `"square"`, `"circle"`, `"hd"`), or a single character
 """
 function stem!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Stem(x, y; kwargs...))
@@ -117,7 +135,15 @@ end
 
 Add a scatter series to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as `Scatter`.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: color symbol or string such as `:cyan` or `"cyan"`
+- `yside`: `:left`, `:right`, `1`, or `2`
+- `marker`: a named marker (`"dot"`, `"diamond"`, `"cross"`, `"square"`,
+  `"circle"`, `"hd"`) or a single character
 """
 function scatter!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Scatter(x, y; kwargs...))
@@ -128,7 +154,14 @@ end
 
 Add a bar series to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as the single-series `Bar` constructor.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: fill color
+- `width`: positive finite bar width in x-axis units
+- `yside`: `:left`, `:right`, `1`, or `2`
 """
 function bar!(target::Union{Figure,Panel}, x::AbstractVector, y::AbstractVector; kwargs...)
     push!(currentpanel(target), Bar(x, y; kwargs...))
@@ -139,7 +172,14 @@ end
 
 Add a stacked bar series to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as the stacked `Bar` constructor.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `labels`: one label per stack component
+- `colors`: one color per stack component
+- `width`: positive finite bar width in x-axis units
+- `yside`: `:left`, `:right`, `1`, or `2`
 """
 function stackedbar!(target::Union{Figure,Panel}, x::AbstractVector, ys::AbstractVector...; kwargs...)
     push!(currentpanel(target), Bar(x, ys...; kwargs...))
@@ -150,7 +190,13 @@ end
 
 Add a horizontal reference line to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as `HLine`.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: line color
+- `yside`: `:left`, `:right`, `1`, or `2`
 """
 function hline!(target::Union{Figure,Panel}, y::Real; kwargs...)
     push!(currentpanel(target), HLine(y; kwargs...))
@@ -161,7 +207,12 @@ end
 
 Add a vertical reference line to a `Figure` or `Panel`.
 
-Accepts the same keyword arguments as `VLine`.
+When `target` is a `Figure`, the series is added to the current panel.
+
+# Keywords
+
+- `label`: legend label
+- `color`: line color
 """
 function vline!(target::Union{Figure,Panel}, x; kwargs...)
     push!(currentpanel(target), VLine(x; kwargs...))
@@ -250,6 +301,10 @@ Use `IOContext(io, :color => false)` to suppress ANSI colors or
 function render!(io::IO, fig::Figure)
     write(io, join(_render_lines(fig, io), '\n'))
     nothing
+end
+
+function Base.show(io::IO, fig::Figure)
+    render!(io, fig)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", fig::Figure)

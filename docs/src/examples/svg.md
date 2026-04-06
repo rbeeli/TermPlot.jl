@@ -48,6 +48,17 @@ svg = render_svg(fig)
 write("chart.svg", svg)
 ```
 
+You can also override the SVG chrome directly:
+
+```julia
+svg = render_svg(
+    fig;
+    background_fill="#101820",
+    text_fill="#f8f8f2",
+    font_family="\"JuliaMono\", monospace",
+)
+```
+
 ## Stream To An IO
 
 Use `render_svg!` when you want to write directly to a file or buffer.
@@ -69,5 +80,6 @@ show(stdout, MIME"image/svg+xml"(), fig)
 ## Notes
 
 - The default font stack starts with `JuliaMono`, then falls back through modern monospace fonts that render box drawing and braille well.
+- `background_fill`, `text_fill`, and `font_family` can be overridden per export call.
 - Colors and bold titles are preserved in the SVG output.
 - The layout stays tied to the terminal renderer, so terminal and SVG output remain visually aligned.

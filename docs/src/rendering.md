@@ -2,7 +2,7 @@
 
 `TermPlot.jl` has two output paths:
 
-- terminal text via `render`, `render!`, and `show(::MIME"text/plain", ...)`
+- terminal text via `render`, `render!`, `show(fig)`, `display(fig)`, and `show(::MIME"text/plain", ...)`
 - SVG via `render_svg`, `render_svg!`, and `show(::MIME"image/svg+xml", ...)`
 
 Both renderers share the same plot layout and rasterization, so the SVG output
@@ -76,6 +76,7 @@ Use `:color => false` when you need plain logs or deterministic snapshots. Use
 These calls all use the plain-text renderer:
 
 ```julia
+show(fig)
 display(fig)
 show(stdout, MIME"text/plain"(), fig)
 ```
