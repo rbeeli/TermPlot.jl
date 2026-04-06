@@ -17,7 +17,7 @@ code {
 .vp-doc div[class~="language-"] pre.shiki.vp-code,
 .vp-doc div[class~="language-"] pre.shiki.vp-code code,
 .vp-doc div[class~="language-"] pre.shiki.vp-code code .line {
-  line-height: 1 !important;
+  line-height: 1rem !important;
   letter-spacing: -0.5px;
 }
 
