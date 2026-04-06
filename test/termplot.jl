@@ -17,8 +17,8 @@ end
     @test occursin("Basic", text)
     @test occursin("Value", text)
     @test occursin("Date", text)
-    @test occursin("[-] Series", text)
-    @test occursin("[=] Mid", text)
+    @test occursin("─ Series", text)
+    @test occursin("═ Mid", text)
     @test occursin("┌", text)
     @test occursin("└", text)
     @test occursin("│", text)
@@ -75,9 +75,9 @@ end
     text = render(fig)
 
     @test occursin("Steps", text)
-    @test occursin("[-] Post", text)
-    @test occursin("[-] Mid", text)
-    @test occursin("[-] Pre", text)
+    @test occursin("─ Post", text)
+    @test occursin("─ Mid", text)
+    @test occursin("─ Pre", text)
     bad = Figure()
     panel!(bad)
     @test_throws ArgumentError line!(bad, [1, 2], [1, 2]; step=:bad)
@@ -559,8 +559,8 @@ end
     text = render(fig)
     @test occursin("Signals", text)
     @test occursin("◆ Hits", text)
-    @test occursin("[=] Rebalance", text)
-    @test occursin("[=] Flat", text)
+    @test occursin("║ Rebalance", text)
+    @test occursin("═ Flat", text)
     @test occursin("┼", text)
 end
 
@@ -1042,7 +1042,7 @@ end
         String(take!(buffer))
     end
     lines = split(TermPlot._strip_ansi(text), '\n')
-    styled = string(TermPlot._ansi_text("[=]", :cyan), " ", repeat("LongLabel", 8))
+    styled = string(TermPlot._ansi_text("─", :cyan), " ", repeat("LongLabel", 8))
     centered = TermPlot._center_styled_text(styled, 40)
 
     @test all(textwidth(line) == 40 for line in lines)

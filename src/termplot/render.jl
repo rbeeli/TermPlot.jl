@@ -667,12 +667,12 @@ function _legend_items(prepared::PreparedPanel)
         if series isa Line
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue
-            symbol = isnothing(series.marker) ? "[-]" : string(series.marker, '─')
+            symbol = isnothing(series.marker) ? "─" : string(series.marker, '─')
             push!(items, LegendItem(symbol, _ansi_text(symbol, color), series.label))
         elseif series isa Stem
             color = _resolve_series_color(series.color, auto_ix += 1)
             isempty(series.label) && continue
-            symbol = isnothing(series.marker) ? "[|]" : string(series.marker, '│')
+            symbol = isnothing(series.marker) ? "│" : string(series.marker, '│')
             push!(items, LegendItem(symbol, _ansi_text(symbol, color), series.label))
         elseif series isa Scatter
             color = _resolve_series_color(series.color, auto_ix += 1)
@@ -693,7 +693,8 @@ function _legend_items(prepared::PreparedPanel)
             isempty(label) && continue
             auto_ix += 1
             color = _resolve_series_color(series.color, auto_ix)
-            push!(items, LegendItem("[=]", _ansi_text("[=]", color), label))
+            symbol = series isa HLine ? "═" : "║"
+            push!(items, LegendItem(symbol, _ansi_text(symbol, color), label))
         end
     end
     items
