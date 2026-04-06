@@ -356,8 +356,8 @@ function _append_annotation_primitives!(
     lines = split(series.text, '\n'; keepempty=true)
     widths = [textwidth(line) for line in lines]
     box_width = maximum(widths; init=0)
-    top_row = anchor_row - _annotation_y_offset(length(lines), series.yanchor)
-    left_col = anchor_col - _annotation_x_offset(box_width, series.xanchor)
+    top_row = anchor_row - _annotation_y_offset(length(lines), series.yanchor) + series.yshift
+    left_col = anchor_col - _annotation_x_offset(box_width, series.xanchor) + series.xshift
 
     for (line_ix, line) in pairs(lines)
         row = top_row + line_ix - 1

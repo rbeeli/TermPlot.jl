@@ -450,6 +450,8 @@ end
     @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; xanchor=:bad)
     @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; yanchor=:bad)
     @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; align=:bad)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; xshift=1.5)
+    @test_throws ArgumentError annotate!(fig, 0.5, 0.5, "oops"; yshift=true)
 end
 
 @testitem "paper annotations support anchors, alignment, unicode, and layering" setup = [TermPlotSetup] begin
@@ -476,6 +478,19 @@ end
     text, color, _ = TermPlot._plot_cell(canvas, row, col)
     @test text == "X"
     @test color === :green
+end
+
+@testitem "annotation shifts apply in character cells after anchoring" setup = [TermPlotSetup] begin
+    fig = Figure(; width=48, height=16, legend=false)
+    panel!(fig; xlabel="x", ylabel="y")
+    annotate!(fig, 0.0, 1.0, "pad"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:top, xshift=2, yshift=1, color=:yellow)
+
+    scan = TermPlot._scan_panel(fig.current)
+    prepared = TermPlot._prepare_panel(fig.current, scan, nothing, nothing, nothing)
+    canvas = TermPlot._render_plot_canvas(prepared, 20, 8)
+
+    @test TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 1, false)) == "                    "
+    @test startswith(TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 2, false)), "  pad")
 end
 
 @testitem "axis-space annotations infer x context without affecting autoscaling" setup = [TermPlotSetup] begin

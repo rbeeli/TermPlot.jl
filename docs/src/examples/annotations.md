@@ -7,6 +7,7 @@ Annotations let you place arbitrary Unicode text directly inside the plot area.
 - Mix axis and plot-relative references independently on x and y
 - Control the attached point with `xanchor` and `yanchor`
 - Control multi-line text justification with `align`
+- Add fixed cell-based padding with `xshift` and `yshift`
 
 The charts below are generated during the docs build.
 
@@ -110,6 +111,58 @@ display(fig)
 ```
 
 ```@example annotations_paper_perimeter; ansicolor=true
+withenv("NO_COLOR" => nothing) do # hide
+    render!(IOContext(stdout, :color => true), fig) # hide
+    println() # hide
+end # hide
+nothing # hide
+```
+
+## Offsets
+
+Use `xshift` and `yshift` to nudge an annotation after anchoring. The units are
+terminal character cells: positive `xshift` moves right, positive `yshift`
+moves down.
+
+```@setup annotations_offsets
+using TermPlot
+
+fig = Figure(title="Annotation Offsets", width=112, height=24, legend=false);
+panel!(fig; title="Shifted Away From The Frame", xlabel="Bucket", ylabel="Signal");
+
+x = 1:8;
+signal = [0.18, 0.26, 0.38, 0.35, 0.55, 0.62, 0.74, 0.82];
+
+line!(fig, x, signal; color=:cyan, marker=:circle);
+annotate!(fig, 0.0, 1.0, "top left"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:top, xshift=2, yshift=1, color=:yellow);
+annotate!(fig, 1.0, 1.0, "top right"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:top, xshift=-2, yshift=1, color=:green);
+annotate!(fig, 0.0, 0.0, "bottom left"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:bottom, xshift=2, yshift=-1, color=:magenta);
+annotate!(fig, 1.0, 0.0, "bottom right"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:bottom, xshift=-2, yshift=-1, color=:red);
+
+ylims!(fig, 0, 1);
+```
+
+```julia
+using TermPlot
+
+fig = Figure(title="Annotation Offsets", width=112, height=24, legend=false)
+panel!(fig; title="Shifted Away From The Frame", xlabel="Bucket", ylabel="Signal")
+
+x = 1:8
+signal = [0.18, 0.26, 0.38, 0.35, 0.55, 0.62, 0.74, 0.82]
+
+line!(fig, x, signal; color=:cyan, marker=:circle)
+annotate!(fig, 0.0, 1.0, "top left"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:top, xshift=2, yshift=1, color=:yellow)
+annotate!(fig, 1.0, 1.0, "top right"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:top, xshift=-2, yshift=1, color=:green)
+annotate!(fig, 0.0, 0.0, "bottom left"; xref=:paper, yref=:paper, xanchor=:left, yanchor=:bottom, xshift=2, yshift=-1, color=:magenta)
+annotate!(fig, 1.0, 0.0, "bottom right"; xref=:paper, yref=:paper, xanchor=:right, yanchor=:bottom, xshift=-2, yshift=-1, color=:red)
+
+ylims!(fig, 0, 1)
+
+display(fig)
+```
+
+```@example annotations_offsets; ansicolor=true
 withenv("NO_COLOR" => nothing) do # hide
     render!(IOContext(stdout, :color => true), fig) # hide
     println() # hide

@@ -127,6 +127,8 @@ struct Annotation{TX,TY} <: AbstractSeries
     xanchor::Symbol
     yanchor::Symbol
     align::Symbol
+    xshift::Int
+    yshift::Int
     color::Union{Nothing,Symbol}
 end
 
@@ -618,7 +620,7 @@ function VLine(
 end
 
 """
-    Annotation(x, y, text; xref=:x, yref=:y, xanchor=:center, yanchor=:middle, align=:center, color=nothing)
+    Annotation(x, y, text; xref=:x, yref=:y, xanchor=:center, yanchor=:middle, align=:center, xshift=0, yshift=0, color=nothing)
 
 Construct a text annotation.
 
@@ -635,6 +637,8 @@ Construct a text annotation.
 `yanchor=:top/:middle/:bottom` to cover corners, edge midpoints, and center.
 
 `align` controls multi-line text alignment inside the annotation box.
+`xshift` and `yshift` apply a final position shift in terminal character cells.
+Positive `xshift` moves right, positive `yshift` moves down.
 
 # Keywords
 
@@ -643,6 +647,8 @@ Construct a text annotation.
 - `xanchor`: `:left`, `:center`, or `:right`
 - `yanchor`: `:top`, `:middle`, `:bottom`, or `:center`
 - `align`: `:left`, `:center`, or `:right`
+- `xshift`: integer horizontal shift in character cells
+- `yshift`: integer vertical shift in character rows
 - `color`: annotation text color
 """
 function Annotation(
@@ -654,6 +660,8 @@ function Annotation(
     xanchor::Union{Symbol,AbstractString}=:center,
     yanchor::Union{Symbol,AbstractString}=:middle,
     align::Union{Symbol,AbstractString}=:center,
+    xshift=0,
+    yshift=0,
     color=nothing,
 )
     normalized_xref = _normalize_annotation_xref(xref)
@@ -669,6 +677,8 @@ function Annotation(
         _normalize_annotation_xanchor(xanchor),
         _normalize_annotation_yanchor(yanchor),
         _normalize_annotation_align(align),
+        _normalize_annotation_shift(xshift, :xshift),
+        _normalize_annotation_shift(yshift, :yshift),
         normalize_color(color),
     )
 end
@@ -709,6 +719,11 @@ function _normalize_annotation_align(align)::Symbol
     value = Symbol(lowercase(String(align)))
     value in (:left, :center, :right) || throw(ArgumentError("align must be :left, :center, or :right"))
     value
+end
+
+function _normalize_annotation_shift(value, name::Symbol)::Int
+    value isa Integer && !(value isa Bool) || throw(ArgumentError("$(name) must be an integer number of character cells"))
+    Int(value)
 end
 
 function _validate_annotation_paper_coord(value, axis_name::Symbol)

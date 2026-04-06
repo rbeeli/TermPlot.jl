@@ -232,6 +232,8 @@ When `target` is a `Figure`, the annotation is added to the current panel.
 - `xanchor`: `:left`, `:center`, or `:right`
 - `yanchor`: `:top`, `:middle`, `:bottom`, or `:center`
 - `align`: `:left`, `:center`, or `:right`
+- `xshift`: integer horizontal shift in character cells; positive moves right
+- `yshift`: integer vertical shift in character rows; positive moves down
 - `color`: annotation text color
 """
 function annotate!(target::Union{Figure,Panel}, x, y, text::AbstractString; kwargs...)
