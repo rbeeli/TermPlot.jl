@@ -2,6 +2,14 @@ const SVG_DEFAULT_FONT_FAMILY = "\"JuliaMono\", \"Iosevka Term\", \"Cascadia Mon
 const SVG_DEFAULT_BACKGROUND_FILL = "#161618"
 const SVG_DEFAULT_TEXT_FILL = "#f4f6f7"
 
+struct _SVGPositionedRun
+    text::String
+    columns::Vector{Int}
+    cells::Int
+    fill::Union{Nothing,String}
+    bold::Bool
+end
+
 """
     render_svg(
         fig;
@@ -15,8 +23,8 @@ const SVG_DEFAULT_TEXT_FILL = "#f4f6f7"
 
 Render a figure to an SVG string.
 
-The SVG renderer reuses TermPlot's text layout and ANSI styling, mapping it to
-SVG text spans on a dark background.
+The SVG renderer reuses TermPlot's text layout and ANSI styling, positioning
+visible glyphs on a fixed cell grid over a dark background.
 
 # Keywords
 
@@ -116,16 +124,9 @@ function render_svg!(
 
     for (row, line) in pairs(lines)
         y = padding + (row - 1) * line_height
-        plain_width = textwidth(plain_lines[row])
-        write(io, "<tspan x=\"$(padding)\" y=\"$(y)\"")
-        if plain_width > 0
-            write(io, " textLength=\"$(plain_width * cell_width)\" lengthAdjust=\"spacingAndGlyphs\"")
+        for run in _svg_positioned_runs(line)
+            _write_svg_run!(io, run, y, padding, cell_width)
         end
-        write(io, ">")
-        for run in _svg_runs(line)
-            _write_svg_run!(io, run)
-        end
-        write(io, "</tspan>")
     end
 
     write(io, "</text></svg>")
@@ -178,6 +179,49 @@ function _svg_runs(line::AbstractString)
     runs
 end
 
+function _svg_positioned_runs(line::AbstractString)
+    positioned = _SVGPositionedRun[]
+    column = 0
+
+    for run in _svg_runs(line)
+        buffer = IOBuffer()
+        columns = Int[]
+
+        function flush!()
+            position(buffer) == 0 && return
+            push!(
+                positioned,
+                _SVGPositionedRun(String(take!(buffer)), copy(columns), length(columns), run.fill, run.bold),
+            )
+            empty!(columns)
+        end
+
+        for grapheme in Base.Unicode.graphemes(run.text)
+            width = textwidth(grapheme)
+            width == 0 && continue
+
+            if all(isspace, grapheme)
+                flush!()
+            elseif width == 1 && length(grapheme) == 1
+                print(buffer, grapheme)
+                push!(columns, column)
+            else
+                flush!()
+                push!(
+                    positioned,
+                    _SVGPositionedRun(String(grapheme), [column], width, run.fill, run.bold),
+                )
+            end
+
+            column += width
+        end
+
+        flush!()
+    end
+
+    positioned
+end
+
 function _apply_svg_sgr(codes::AbstractString, fill::Union{Nothing,String}, bold::Bool)
     isempty(codes) && return nothing, false
     next_fill = fill
@@ -216,15 +260,23 @@ function _svg_ansi_fill(code::Int)::Union{Nothing,String}
     nothing
 end
 
-function _write_svg_run!(io::IO, run)
-    attrs = String[]
-    !isnothing(run.fill) && push!(attrs, "fill=\"" * run.fill * "\"")
-    run.bold && push!(attrs, "font-weight=\"700\"")
-    escaped = _escape_xml_text(run.text)
-    if isempty(attrs)
-        write(io, escaped)
-    else
-        write(io, "<tspan ", join(attrs, ' '), ">", escaped, "</tspan>")
+function _write_svg_run!(io::IO, run::_SVGPositionedRun, y::Int, padding::Int, cell_width::Int)
+    write(io, "<tspan x=\"")
+    _write_svg_x_positions!(io, run.columns, padding, cell_width)
+    write(io, "\" y=\"$(y)\"")
+    !isnothing(run.fill) && write(io, " fill=\"", run.fill, "\"")
+    run.bold && write(io, " font-weight=\"700\"")
+    if run.cells != length(run.columns)
+        write(io, " textLength=\"$(run.cells * cell_width)\" lengthAdjust=\"spacingAndGlyphs\"")
+    end
+    write(io, ">", _escape_xml_text(run.text), "</tspan>")
+    nothing
+end
+
+function _write_svg_x_positions!(io::IO, columns::Vector{Int}, padding::Int, cell_width::Int)
+    for (index, column) in pairs(columns)
+        index > 1 && write(io, ' ')
+        print(io, padding + column * cell_width)
     end
     nothing
 end

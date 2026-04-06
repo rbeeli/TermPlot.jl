@@ -1,7 +1,7 @@
 # SVG Export
 
 `TermPlot.jl` can export the same chart output as SVG via `render_svg` and `render_svg!`.
-The SVG renderer reuses the text layout, box drawing, braille rasterization, ANSI colors, and bold titles from the terminal renderer.
+The SVG renderer reuses the text layout, box drawing, braille rasterization, ANSI colors, and bold titles from the terminal renderer while pinning visible glyphs to the terminal cell grid.
 
 ## Preview
 

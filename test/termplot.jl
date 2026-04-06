@@ -874,14 +874,28 @@ end
     @test occursin("font-size=\"14\" fill=\"#f4f6f7\"", svg)
     @test occursin("fill=\"#138d90\"", svg)
     @test occursin("font-weight=\"700\"", svg)
-    @test occursin("T &lt;&gt;&amp;", svg)
+    @test occursin(">T</tspan>", svg)
+    @test occursin("&lt;&gt;&amp;", svg)
     @test !occursin("\e[", svg)
+    @test !occursin("lengthAdjust=\"spacingAndGlyphs\"", svg)
     @test occursin("<rect width=\"100%\" height=\"100%\" fill=\"#010203\"/>", themed)
     @test occursin("font-size=\"14\" fill=\"#abcdef\"", themed)
     @test !showable(MIME"image/svg+xml"(), fig)
     @test showable(MIME"text/plain"(), fig)
     @test String(take!(buffer)) == svg
     @test String(take!(shown)) == svg
+end
+
+@testitem "svg renderer pins vline glyphs to a single x position" setup = [TermPlotSetup] begin
+    fig = Figure(; width=44, height=16)
+    panel!(fig; xlabel="x", ylabel="y")
+    vline!(fig, 3; color=:gray)
+
+    svg = TermPlot.render_svg(fig)
+    xs = [match.captures[1] for match in eachmatch(r"<tspan x=\"([0-9 ]+)\" y=\"[0-9]+\" fill=\"#7b7d7d\">│</tspan>", svg)]
+
+    @test length(xs) >= 4
+    @test length(unique(xs)) == 1
 end
 
 @testitem "long legend items wrap within width and styled centering clips" setup = [TermPlotSetup] begin
