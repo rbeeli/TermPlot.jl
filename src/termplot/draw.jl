@@ -40,6 +40,7 @@ struct FillRectPrimitive <: AbstractDrawPrimitive
     ymin::Int
     ymax::Int
     color::Symbol
+    fillchar::Char
     order::Int
 end
 
@@ -72,6 +73,7 @@ function _empty_plot_canvas(plot_width::Int, plot_height::Int)::PlotCanvas
     fill_visible = falses(4, plot_height, plot_width)
     fill_colors = Array{Union{Nothing,Symbol}}(undef, 4, plot_height, plot_width)
     fill!(fill_colors, nothing)
+    fill_chars = fill(' ', 4, plot_height, plot_width)
     fill_orders = fill(0, 4, plot_height, plot_width)
 
     guide_horizontal = falses(plot_height, plot_width)
@@ -93,6 +95,7 @@ function _empty_plot_canvas(plot_width::Int, plot_height::Int)::PlotCanvas
         dot_orders,
         fill_visible,
         fill_colors,
+        fill_chars,
         fill_orders,
         guide_horizontal,
         guide_vertical,
@@ -283,6 +286,7 @@ function _append_bar_primitives!(
             y = _finite_y(y_raw)
             isfinite(y) || continue
             color = _resolve_series_color(series.colors[stack_ix], auto_ix_start + stack_ix)
+            fillchar = series.fillchars[stack_ix]
             y_lo = y >= 0.0 ? pos_base : neg_base + y
             y_hi = y >= 0.0 ? pos_base + y : neg_base
             xspan = _clipped_subinterval(x_center - half_width, x_center + half_width, prepared.xaxis, plot_width * 2, _value_to_subx)
@@ -292,7 +296,7 @@ function _append_bar_primitives!(
                 xmax = clamp(max(xspan[1], xspan[2]), 0, plot_width * 2 - 1)
                 ymin = clamp(min(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
                 ymax = clamp(max(yspan[1], yspan[2]), 0, plot_height * 4 - 1)
-                push!(primitives, FillRectPrimitive(xmin, xmax, ymin, ymax, color, next_order))
+                push!(primitives, FillRectPrimitive(xmin, xmax, ymin, ymax, color, fillchar, next_order))
                 next_order += 1
             end
             if y >= 0.0
@@ -464,7 +468,7 @@ end
 function _apply_primitive!(canvas::PlotCanvas, primitive::FillRectPrimitive)
     for suby in primitive.ymin:primitive.ymax
         for subx in primitive.xmin:primitive.xmax
-            _set_fill_subpixel!(canvas, subx, suby, primitive.color, primitive.order)
+            _set_fill_subpixel!(canvas, subx, suby, primitive.color, primitive.fillchar, primitive.order)
         end
     end
     nothing
@@ -544,7 +548,7 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     col = 1
     last_col = size(canvas.text_heads, 2)
     while col <= last_col
-        text, color, advance = _plot_cell(canvas, row, col)
+        text, color, advance = _plot_cell(canvas, row, col, color_enabled)
         if color_enabled
             active = _write_color_transition!(io, active, color)
         end
@@ -555,17 +559,19 @@ function _plot_row_string(canvas::PlotCanvas, row::Int, color_enabled::Bool)::St
     String(take!(io))
 end
 
-function _plot_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{String,Union{Nothing,Symbol},Int}
+function _plot_cell(canvas::PlotCanvas, row::Int, col::Int, color_enabled::Bool)::Tuple{String,Union{Nothing,Symbol},Int}
     if canvas.text_widths[row, col] > 0 && _text_head_visible(canvas, row, col)
         width = max(canvas.text_widths[row, col], 1)
         return canvas.text_heads[row, col], canvas.text_colors[row, col], width
     end
-    _plot_nontext_cell(canvas, row, col)
+    _plot_nontext_cell(canvas, row, col, color_enabled)
 end
 
-function _plot_nontext_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{String,Union{Nothing,Symbol},Int}
+_plot_cell(canvas::PlotCanvas, row::Int, col::Int) = _plot_cell(canvas, row, col, false)
+
+function _plot_nontext_cell(canvas::PlotCanvas, row::Int, col::Int, color_enabled::Bool)::Tuple{String,Union{Nothing,Symbol},Int}
     dot_mask, dot_color, dot_order = _dot_cell_state(canvas, row, col)
-    fill_mask, fill_color, fill_order = _fill_cell_state(canvas, row, col)
+    fill_mask, fill_color, fill_char, fill_uniform, fill_order = _fill_cell_state(canvas, row, col)
     guide_char, guide_color, guide_order = _guide_cell_state(canvas, row, col)
 
     best_order = max(dot_order, fill_order, guide_order)
@@ -573,7 +579,7 @@ function _plot_nontext_cell(canvas::PlotCanvas, row::Int, col::Int)::Tuple{Strin
     if guide_order == best_order
         return string(guide_char), guide_color, 1
     elseif fill_order == best_order
-        return string(get(QUADRANT_CHARS, fill_mask, '█')), fill_color, 1
+        return string(_fill_cell_char(fill_mask, fill_char, fill_uniform, color_enabled)), fill_color, 1
     end
     string(Char(0x2800 + dot_mask)), dot_color, 1
 end
@@ -591,7 +597,7 @@ end
 
 function _nontext_order(canvas::PlotCanvas, row::Int, col::Int)::Int
     _, _, dot_order = _dot_cell_state(canvas, row, col)
-    _, _, fill_order = _fill_cell_state(canvas, row, col)
+    _, _, _, _, fill_order = _fill_cell_state(canvas, row, col)
     _, _, guide_order = _guide_cell_state(canvas, row, col)
     max(dot_order, fill_order, guide_order)
 end
@@ -612,20 +618,30 @@ function _dot_cell_state(canvas::PlotCanvas, row::Int, col::Int)::Tuple{UInt8,Un
     mask, color, order
 end
 
-function _fill_cell_state(canvas::PlotCanvas, row::Int, col::Int)::Tuple{UInt8,Union{Nothing,Symbol},Int}
+function _fill_cell_state(canvas::PlotCanvas, row::Int, col::Int)::Tuple{UInt8,Union{Nothing,Symbol},Char,Bool,Int}
     mask = UInt8(0)
     color = nothing
+    fillchar = '█'
+    uniform = true
+    seen_char = false
     order = 0
     for quadrant in 1:4
         canvas.fill_visible[quadrant, row, col] || continue
         mask |= UInt8(1 << (quadrant - 1))
+        quadrant_char = canvas.fill_chars[quadrant, row, col]
+        if !seen_char
+            fillchar = quadrant_char
+            seen_char = true
+        elseif quadrant_char != fillchar
+            uniform = false
+        end
         quadrant_order = canvas.fill_orders[quadrant, row, col]
         if quadrant_order >= order
             order = quadrant_order
             color = canvas.fill_colors[quadrant, row, col]
         end
     end
-    mask, color, order
+    mask, color, fillchar, uniform, order
 end
 
 function _guide_cell_state(canvas::PlotCanvas, row::Int, col::Int)::Tuple{Char,Union{Nothing,Symbol},Int}
@@ -696,7 +712,7 @@ function _clear_text_span!(canvas::PlotCanvas, row::Int, start::Int, stop::Int)
     nothing
 end
 
-function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol, order::Int)
+function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Symbol, fillchar::Char, order::Int)
     cell_row = fld(suby, 4) + 1
     cell_col = fld(subx, 2) + 1
     quadrant = _fill_quadrant_index(mod(subx, 2), mod(suby, 4))
@@ -704,8 +720,16 @@ function _set_fill_subpixel!(canvas::PlotCanvas, subx::Int, suby::Int, color::Sy
     if order >= canvas.fill_orders[quadrant, cell_row, cell_col]
         canvas.fill_orders[quadrant, cell_row, cell_col] = order
         canvas.fill_colors[quadrant, cell_row, cell_col] = color
+        canvas.fill_chars[quadrant, cell_row, cell_col] = fillchar
     end
     nothing
+end
+
+function _fill_cell_char(mask::UInt8, fillchar::Char, uniform::Bool, color_enabled::Bool)::Char
+    if !color_enabled && mask == 0x0f && uniform
+        return fillchar
+    end
+    get(QUADRANT_CHARS, mask, '█')
 end
 
 function _set_guide_cell!(canvas::PlotCanvas, row::Int, col::Int, orientation::Symbol, color::Symbol, order::Int)

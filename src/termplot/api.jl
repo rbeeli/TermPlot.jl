@@ -173,6 +173,8 @@ end
 Add a stacked bar series to a `Figure` or `Panel`.
 
 When `target` is a `Figure`, the series is added to the current panel.
+Stack components use distinct monochrome fill textures by default so they
+remain readable when ANSI color is disabled.
 
 # Keywords
 

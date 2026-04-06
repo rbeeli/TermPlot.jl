@@ -241,14 +241,51 @@ end
         colors=[:cyan, :yellow],
         width=0.8,
     )
-    text = render(fig)
+    buffer = IOBuffer()
+    render!(IOContext(buffer, :color => false), fig)
+    text = String(take!(buffer))
     @test occursin("Bars", text)
-    @test occursin("[#] Risky", text)
-    @test occursin("[#] Cash", text)
+    @test occursin("[█] Risky", text)
+    @test occursin("[▓] Cash", text)
     @test occursin("A", text)
     @test occursin("B", text)
     @test occursin("C", text)
     @test any(ch -> ch == '█' || ch == '▌' || ch == '▐' || ch == '▄', text)
+
+    color_buffer = IOBuffer()
+    render!(IOContext(color_buffer, :color => true), fig)
+    color_text = String(take!(color_buffer))
+    stripped_color = TermPlot._strip_ansi(color_text)
+    @test occursin("\e[", color_text)
+    @test occursin("[█] Risky", stripped_color)
+    @test occursin("[█] Cash", stripped_color)
+    @test !occursin("[#] Risky", stripped_color)
+    @test !occursin("[▓] Cash", stripped_color)
+end
+
+@testitem "stacked bars use distinct textures without color" setup = [TermPlotSetup] begin
+    fig = Figure(; width=72, height=18, legend=false)
+    panel!(fig; title="Textures", xlabel="Bucket", ylabel="Weight")
+    stackedbar!(
+        fig,
+        ["A", "B", "C"],
+        [35.0, 30.0, 25.0],
+        [30.0, 35.0, 40.0],
+        [35.0, 35.0, 35.0];
+        labels=["Risky", "Defensive", "Cash"],
+        colors=[:cyan, :yellow, :green],
+        width=0.8,
+    )
+    ylims!(fig, 0, 100)
+
+    buffer = IOBuffer()
+    render!(IOContext(buffer, :color => false), fig)
+    text = String(take!(buffer))
+
+    @test !occursin("\e[", text)
+    @test occursin("Textures", text)
+    @test occursin('▓', text)
+    @test occursin('▒', text)
 end
 
 @testitem "stacked bars skip fully clipped stack layers on y" setup = [TermPlotSetup] begin
@@ -279,7 +316,7 @@ end
     ylims!(fig, 0, 1)
     text = render(fig)
     @test occursin("Simple Bars", text)
-    @test occursin("[#] Signal", text)
+    @test occursin("[█] Signal", text)
     @test occursin("Value", text)
     @test occursin("Quality", text)
     @test occursin("Momentum", text)

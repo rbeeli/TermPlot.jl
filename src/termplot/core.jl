@@ -1,4 +1,5 @@
 const DEFAULT_PALETTE = (:cyan, :blue, :yellow, :red, :magenta, :green, :white, :black, :gray)
+const DEFAULT_STACKED_BAR_FILL_CHARS = ('█', '▓', '▒', '░', '▩', '▦', '▨', '▧')
 const ANSI_CODES = Dict{Symbol,String}(
     :black => "\e[30m",
     :red => "\e[31m",
@@ -85,6 +86,7 @@ struct Bar{TX<:AbstractVector} <: AbstractSeries
     ys::Vector{AbstractVector}
     labels::Vector{String}
     colors::Vector{Union{Nothing,Symbol}}
+    fillchars::Vector{Char}
     width::Float64
     yside::Symbol
 end
@@ -234,6 +236,7 @@ struct PlotCanvas
     dot_orders::Array{Int,3}
     fill_visible::BitArray{3}
     fill_colors::Array{Union{Nothing,Symbol},3}
+    fill_chars::Array{Char,3}
     fill_orders::Array{Int,3}
     guide_horizontal::BitMatrix
     guide_vertical::BitMatrix
@@ -541,6 +544,7 @@ function Bar(
         AbstractVector[y],
         [String(label)],
         Union{Nothing,Symbol}[normalize_color(color)],
+        ['█'],
         _normalize_bar_width(width),
         yside_symbol(yside),
     )
@@ -550,6 +554,9 @@ end
     Bar(x, ys...; labels, colors=fill(nothing, length(ys)), width=0.8, yside=:left)
 
 Construct a stacked bar chart.
+
+Stack layers use distinct monochrome fill textures by default so they remain
+distinguishable when ANSI color is disabled.
 
 # Keywords
 
@@ -576,9 +583,15 @@ function Bar(
         AbstractVector[ys...],
         String.(labels),
         Union{Nothing,Symbol}[normalize_color(color) for color in colors],
+        _default_stacked_bar_fillchars(length(ys)),
         _normalize_bar_width(width),
         yside_symbol(yside),
     )
+end
+
+function _default_stacked_bar_fillchars(count::Int)::Vector{Char}
+    count >= 0 || throw(ArgumentError("stacked bar layer count must be non-negative"))
+    [DEFAULT_STACKED_BAR_FILL_CHARS[mod1(ix, length(DEFAULT_STACKED_BAR_FILL_CHARS))] for ix in 1:count]
 end
 
 """

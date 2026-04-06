@@ -1,6 +1,8 @@
 # Stacked Bars
 
 Stacked bars are useful for compositions and grouped categorical breakdowns.
+When ANSI color is unavailable, each stack layer falls back to a distinct fill
+texture so the composition stays readable in plain text.
 
 The chart below is generated during the docs build.
 
@@ -171,5 +173,21 @@ withenv("NO_COLOR" => nothing) do # hide
     render!(IOContext(stdout, :color => true), fig) # hide
     println() # hide
 end # hide
+nothing # hide
+```
+
+## Monochrome Textures
+
+The same time-based allocation figure rendered with `:color => false` falls
+back to per-layer textures and plain legend markers. That keeps the stacked
+composition readable in logs and snapshots without ANSI support.
+
+```julia
+render!(IOContext(stdout, :color => false), fig)
+```
+
+```@example stacked_bars_time
+render!(IOContext(stdout, :color => false), fig) # hide
+println() # hide
 nothing # hide
 ```

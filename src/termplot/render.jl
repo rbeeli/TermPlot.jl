@@ -685,7 +685,8 @@ function _legend_items(prepared::PreparedPanel)
                 label = series.labels[label_ix]
                 isempty(label) && continue
                 color = _resolve_series_color(series.colors[label_ix], auto_ix)
-                push!(items, LegendItem("[#]", _ansi_text("[#]", color), label))
+                symbol_plain, symbol_styled = _bar_legend_symbols(series, label_ix)
+                push!(items, LegendItem(symbol_plain, _ansi_text(symbol_styled, color), label))
             end
         elseif series isa HLine || series isa VLine
             label = series.label
@@ -696,6 +697,11 @@ function _legend_items(prepared::PreparedPanel)
         end
     end
     items
+end
+
+function _bar_legend_symbols(series::Bar, index::Int)::Tuple{String,String}
+    length(series.ys) == 1 && return "[█]", "[█]"
+    string('[', series.fillchars[index], ']'), "[█]"
 end
 
 function _legend_item_lines(item::LegendItem, width::Int, color_enabled::Bool)::Vector{Tuple{Int,String}}
