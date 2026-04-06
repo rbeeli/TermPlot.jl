@@ -7,7 +7,7 @@ The chart below is generated during the docs build.
 ```@setup stacked_bars
 using TermPlot
 
-fig = Figure(title="Stacked Bar Example", width=96, height=22);
+fig = Figure(title="Stacked Bar Example", width=112, height=22);
 panel!(fig; title="Allocation Mix", xlabel="Bucket", ylabel="Weight %");
 
 stackedbar!(
@@ -28,7 +28,7 @@ ylims!(fig, 0, 100);
 ```julia
 using TermPlot
 
-fig = Figure(title="Stacked Bar Example", width=96, height=22)
+fig = Figure(title="Stacked Bar Example", width=112, height=22)
 panel!(fig; title="Allocation Mix", xlabel="Bucket", ylabel="Weight %")
 
 stackedbar!(
@@ -64,7 +64,7 @@ The allocation rotates across risk-on, defensive, and inflation-sensitive sleeve
 using Dates
 using TermPlot
 
-fig = Figure(title="Time-Based Stacked Bars", width=108, height=24);
+fig = Figure(title="Time-Based Stacked Bars", width=112, height=24);
 panel!(
     fig;
     title="Portfolio Allocation Over Time",
@@ -116,7 +116,7 @@ ylims!(fig, 0, 1);
 using Dates
 using TermPlot
 
-fig = Figure(title="Time-Based Stacked Bars", width=108, height=24)
+fig = Figure(title="Time-Based Stacked Bars", width=112, height=24)
 panel!(
     fig;
     title="Portfolio Allocation Over Time",

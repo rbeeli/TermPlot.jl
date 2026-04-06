@@ -362,66 +362,30 @@ end
     @test occursin("width=\"336\"", svg)
 end
 
-@testitem "braille cells keep the dominant line color at crossings" setup = [TermPlotSetup] begin
-    canvas = TermPlot.PlotCanvas(
-        fill(UInt8(0), 1, 1),
-        Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
-        [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
-        fill(0, 1, 1),
-        fill(UInt8(0), 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-        fill('\0', 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-        fill("", 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-    )
-    canvas.mask_colors[1, 1] = nothing
+@testitem "braille cells use the latest visible dot color" setup = [TermPlotSetup] begin
+    canvas = TermPlot._empty_plot_canvas(1, 1)
 
     TermPlot._set_subpixel!(canvas, 0, 0, :cyan, 1)
     TermPlot._set_subpixel!(canvas, 1, 0, :cyan, 1)
     TermPlot._set_subpixel!(canvas, 0, 1, :cyan, 1)
     TermPlot._set_subpixel!(canvas, 1, 3, :yellow, 2)
 
-    text = withenv("NO_COLOR" => nothing) do
-        TermPlot._plot_row_string(canvas, 1, true)
-    end
+    text, color, _ = TermPlot._plot_cell(canvas, 1, 1)
 
-    @test occursin("\e[36m", text)
-    @test !occursin("\e[33m", text)
+    @test UInt32(only(text)) in 0x2800:0x28ff
+    @test color === :yellow
 end
 
-@testitem "braille cell color ties prefer the later series" setup = [TermPlotSetup] begin
-    canvas = TermPlot.PlotCanvas(
-        fill(UInt8(0), 1, 1),
-        Matrix{Union{Nothing,Symbol}}(undef, 1, 1),
-        [Pair{Symbol,UInt8}[] for _ in 1:1, _ in 1:1],
-        fill(0, 1, 1),
-        fill(UInt8(0), 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-        fill('\0', 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-        fill("", 1, 1),
-        fill(nothing, 1, 1),
-        fill(0, 1, 1),
-    )
-    canvas.mask_colors[1, 1] = nothing
+@testitem "text spans render only when topmost across their full width" setup = [TermPlotSetup] begin
+    canvas = TermPlot._empty_plot_canvas(2, 1)
 
-    TermPlot._set_subpixel!(canvas, 0, 0, :cyan, 1)
-    TermPlot._set_subpixel!(canvas, 1, 0, :cyan, 1)
-    TermPlot._set_subpixel!(canvas, 0, 1, :yellow, 2)
-    TermPlot._set_subpixel!(canvas, 1, 1, :yellow, 2)
+    TermPlot._write_text_span!(canvas, 1, 1, "🐱", 2, :yellow, 1)
+    TermPlot._set_subpixel!(canvas, 2, 0, :red, 2)
 
-    text = withenv("NO_COLOR" => nothing) do
-        TermPlot._plot_row_string(canvas, 1, true)
-    end
+    text = TermPlot._strip_ansi(TermPlot._plot_row_string(canvas, 1, false))
 
-    @test occursin("\e[33m", text)
-    @test !occursin("\e[36m", text)
+    @test !occursin("🐱", text)
+    @test any(ch -> UInt32(ch) in 0x2800:0x28ff, text)
 end
 
 @testitem "plot cell rendering follows series insertion order across layer types" setup = [TermPlotSetup] begin
@@ -454,6 +418,25 @@ end
     text, color, _ = overlapping_cell(marker_above.current)
     @test text == "◆"
     @test color === :yellow
+end
+
+@testitem "line markers render above their own stroke" setup = [TermPlotSetup] begin
+    fig = Figure(; width=40, height=16)
+    panel!(fig; xlabel="x", ylabel="y")
+    line!(fig, [1.0, 2.0], [1.0, 2.0]; color=:cyan, marker=:diamond)
+
+    scan = TermPlot._scan_panel(fig.current)
+    prepared = TermPlot._prepare_panel(fig.current, scan, nothing, nothing, nothing)
+    plot_width = 20
+    plot_height = 8
+    canvas = TermPlot._render_plot_canvas(prepared, plot_width, plot_height)
+    point = TermPlot._series_point(prepared.xcontext, prepared.xaxis, prepared.yleft, 1.0, 1.0, plot_width * 2, plot_height * 4)
+    row = fld(point[2], 4) + 1
+    col = fld(point[1], 2) + 1
+    text, color, _ = TermPlot._plot_cell(canvas, row, col)
+
+    @test text == "◆"
+    @test color === :cyan
 end
 
 @testitem "scatter and vertical reference lines render" setup = [TermPlotSetup] begin
@@ -687,7 +670,7 @@ end
         [20.0, 50.0, 50.0, 60.0];
         labels=["Trend", "Carry", "Defensive"],
         colors=[:cyan, :yellow, :blue],
-        width=0.82,
+        width=0.8,
     )
     ylims!(risk, 0, 100)
 

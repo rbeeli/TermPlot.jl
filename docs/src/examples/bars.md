@@ -9,7 +9,7 @@ The charts below are generated during the docs build.
 ```@setup bars_cross_section
 using TermPlot
 
-fig = Figure(title="Bar Chart Example", width=96, height=22);
+fig = Figure(title="Bar Chart Example", width=112, height=24);
 panel!(fig; title="Factor Snapshot", xlabel="Bucket", ylabel="Score");
 
 bar!(
@@ -27,7 +27,7 @@ ylims!(fig, 0, 1);
 ```julia
 using TermPlot
 
-fig = Figure(title="Bar Chart Example", width=96, height=22)
+fig = Figure(title="Bar Chart Example", width=112, height=24)
 panel!(fig; title="Factor Snapshot", xlabel="Bucket", ylabel="Score")
 
 bar!(
@@ -58,7 +58,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Time Bar Example", width=108, height=24);
+fig = Figure(title="Time Bar Example", width=112, height=24);
 panel!(
     fig;
     title="Daily Traded Volume",
@@ -78,7 +78,7 @@ ylims!(fig, 0, 35);
 using Dates
 using TermPlot
 
-fig = Figure(title="Time Bar Example", width=108, height=24)
+fig = Figure(title="Time Bar Example", width=112, height=24)
 panel!(
     fig;
     title="Daily Traded Volume",

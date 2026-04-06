@@ -15,7 +15,7 @@ The preview below is a committed SVG asset generated with `render_svg`.
 using Dates
 using TermPlot
 
-fig = Figure(title="SVG Export", width=96, height=22)
+fig = Figure(title="SVG Export", width=112, height=24)
 panel!(
     fig;
     title="Strategy Monitor",

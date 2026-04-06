@@ -8,7 +8,7 @@ The chart below is generated during the docs build.
 using Dates
 using TermPlot
 
-fig = Figure(title="Reference Lines Example", width=96, height=22);
+fig = Figure(title="Reference Lines Example", width=112, height=24);
 panel!(fig; title="Breakout Monitor", xlabel="Date", ylabel="Close", x_date_format=dateformat"yyyy-mm-dd");
 
 x = [Date(2024, 1, 1) + Day(i) for i in 0:11];
@@ -26,7 +26,7 @@ ylims!(fig, 100, 112);
 using Dates
 using TermPlot
 
-fig = Figure(title="Reference Lines Example", width=96, height=22)
+fig = Figure(title="Reference Lines Example", width=112, height=24)
 panel!(fig; title="Breakout Monitor", xlabel="Date", ylabel="Close", x_date_format=dateformat"yyyy-mm-dd")
 
 x = [Date(2024, 1, 1) + Day(i) for i in 0:11]

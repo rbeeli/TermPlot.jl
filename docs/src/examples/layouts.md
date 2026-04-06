@@ -21,7 +21,7 @@ fig = Figure(
     GridLayout(1, 3; colseams=GridSeam(; gap=2), rowaligns=:all, colaligns=[:pair, :pair, :none]);
     title="Selective Plot Alignment",
     width=112,
-    height=16,
+    height=24,
     legend=false,
 );
 
@@ -41,7 +41,7 @@ fig = Figure(
     GridLayout(1, 3; colseams=GridSeam(; gap=2), rowaligns=:all, colaligns=[:pair, :pair, :none]);
     title="Selective Plot Alignment",
     width=112,
-    height=16,
+    height=24,
     legend=false,
 )
 
@@ -140,8 +140,8 @@ using TermPlot
 fig = Figure(
     GridLayout(1, 2; rowaligns=:all, colseams=GridSeam(:adjacent), colaligns=:all);
     title="Adjacent Columns",
-    width=108,
-    height=20,
+    width=112,
+    height=24,
     linkx=true,
     linky=true,
     legend=false,
@@ -164,8 +164,8 @@ using TermPlot
 fig = Figure(
     GridLayout(1, 2; rowaligns=:all, colseams=GridSeam(:adjacent), colaligns=:all);
     title="Adjacent Columns",
-    width=108,
-    height=20,
+    width=112,
+    height=24,
     linkx=true,
     linky=true,
     legend=false,
@@ -201,7 +201,7 @@ using TermPlot
 fig = Figure(
     GridLayout(2, 1; rowseams=GridSeam(:adjacent), rowaligns=:all);
     title="Adjacent Rows",
-    width=96,
+    width=112,
     height=24,
     linkx=true,
     legend=false,
@@ -223,7 +223,7 @@ using TermPlot
 fig = Figure(
     GridLayout(2, 1; rowseams=GridSeam(:adjacent), rowaligns=:all);
     title="Adjacent Rows",
-    width=96,
+    width=112,
     height=24,
     linkx=true,
     legend=false,
@@ -285,7 +285,7 @@ x = [Date(2024, 8, 1) + Day(i) for i in 0:9];
 line!(main, x, [1.00, 1.02, 1.05, 1.03, 1.08, 1.10, 1.09, 1.12, 1.15, 1.18]; color=:cyan);
 line!(risk, x, [0.22, 0.24, 0.26, 0.25, 0.29, 0.31, 0.28, 0.30, 0.27, 0.25]; color=:yellow);
 line!(spread, x, [0, 8, 16, 12, 24, 30, 27, 35, 43, 48]; color=:blue);
-bar!(hits, x, [3, 2, 5, 4, 6, 5, 7, 4, 6, 5]; color=:magenta, width=0.82);
+bar!(hits, x, [3, 2, 5, 4, 6, 5, 7, 4, 6, 5]; color=:magenta, width=0.8);
 ```
 
 ```julia
@@ -320,7 +320,7 @@ x = [Date(2024, 8, 1) + Day(i) for i in 0:9]
 line!(main, x, [1.00, 1.02, 1.05, 1.03, 1.08, 1.10, 1.09, 1.12, 1.15, 1.18]; color=:cyan)
 line!(risk, x, [0.22, 0.24, 0.26, 0.25, 0.29, 0.31, 0.28, 0.30, 0.27, 0.25]; color=:yellow)
 line!(spread, x, [0, 8, 16, 12, 24, 30, 27, 35, 43, 48]; color=:blue)
-bar!(hits, x, [3, 2, 5, 4, 6, 5, 7, 4, 6, 5]; color=:magenta, width=0.82)
+bar!(hits, x, [3, 2, 5, 4, 6, 5, 7, 4, 6, 5]; color=:magenta, width=0.8)
 
 display(fig)
 ```
@@ -370,7 +370,7 @@ line!(trend, x, [100.0, 101.5, 103.0, 102.4, 104.2, 105.6, 106.1, 107.8, 108.5, 
 line!(pullback, x, [-1.0, -0.6, -0.2, 0.4, 0.8, 0.3, -0.1, -0.5, -0.2, 0.5, 0.9, 0.6]; color=:yellow);
 hline!(pullback, 0.0; color=:gray);
 line!(carry, x, [8.0, 10.0, 11.0, 9.0, 13.0, 14.0, 12.0, 15.0, 16.0, 14.0, 18.0, 19.0]; color=:magenta);
-bar!(breadth, x, [0.42, 0.48, 0.55, 0.51, 0.63, 0.68, 0.66, 0.72, 0.75, 0.71, 0.79, 0.82]; color=:green, width=0.84);
+bar!(breadth, x, [0.42, 0.48, 0.55, 0.51, 0.63, 0.68, 0.66, 0.72, 0.75, 0.71, 0.79, 0.82]; color=:green, width=0.8);
 stackedbar!(
     risk,
     ["EQ", "Rates", "FX", "Cmdty"],
@@ -379,7 +379,7 @@ stackedbar!(
     [20.0, 50.0, 50.0, 60.0];
     labels=["Trend", "Carry", "Defensive"],
     colors=[:cyan, :yellow, :blue],
-    width=0.82,
+    width=0.8,
 );
 ylims!(risk, 0, 100);
 ```
@@ -417,7 +417,7 @@ line!(trend, x, [100.0, 101.5, 103.0, 102.4, 104.2, 105.6, 106.1, 107.8, 108.5, 
 line!(pullback, x, [-1.0, -0.6, -0.2, 0.4, 0.8, 0.3, -0.1, -0.5, -0.2, 0.5, 0.9, 0.6]; color=:yellow)
 hline!(pullback, 0.0; color=:gray)
 line!(carry, x, [8.0, 10.0, 11.0, 9.0, 13.0, 14.0, 12.0, 15.0, 16.0, 14.0, 18.0, 19.0]; color=:magenta)
-bar!(breadth, x, [0.42, 0.48, 0.55, 0.51, 0.63, 0.68, 0.66, 0.72, 0.75, 0.71, 0.79, 0.82]; color=:green, width=0.84)
+bar!(breadth, x, [0.42, 0.48, 0.55, 0.51, 0.63, 0.68, 0.66, 0.72, 0.75, 0.71, 0.79, 0.82]; color=:green, width=0.8)
 stackedbar!(
     risk,
     ["EQ", "Rates", "FX", "Cmdty"],
@@ -426,7 +426,7 @@ stackedbar!(
     [20.0, 50.0, 50.0, 60.0];
     labels=["Trend", "Carry", "Defensive"],
     colors=[:cyan, :yellow, :blue],
-    width=0.82,
+    width=0.8,
 )
 ylims!(risk, 0, 100)
 
@@ -478,7 +478,7 @@ line!(lead, x, [0.2, 0.4, 0.7, 0.5, 0.8, 0.9, 0.85, 1.0]; color=:cyan, marker=:c
 line!(follow, x, [0.1, 0.3, 0.6, 0.45, 0.65, 0.8, 0.75, 0.92]; color=:yellow, marker=:diamond);
 line!(breadth, x, [-0.4, -0.1, 0.2, 0.5, 0.1, 0.6, 0.3, 0.7]; color=:magenta);
 hline!(breadth, 0.0; color=:gray);
-bar!(turnover, x, [18, 15, 21, 19, 24, 22, 26, 23]; color=:green, width=0.82);
+bar!(turnover, x, [18, 15, 21, 19, 24, 22, 26, 23]; color=:green, width=0.8);
 stackedbar!(
     states,
     ["S1", "S2", "S3", "S4"],
@@ -487,10 +487,10 @@ stackedbar!(
     [20.0, 25.0, 30.0, 35.0];
     labels=["Trend", "Neutral", "Stress"],
     colors=[:cyan, :yellow, :red],
-    width=0.82,
+    width=0.8,
 );
 ylims!(states, 0, 100);
-bar!(footer, x, [6, 8, 5, 9, 7, 10, 8, 11]; color=:blue, width=0.82);
+bar!(footer, x, [6, 8, 5, 9, 7, 10, 8, 11]; color=:blue, width=0.8);
 ```
 
 ```julia
@@ -526,7 +526,7 @@ line!(lead, x, [0.2, 0.4, 0.7, 0.5, 0.8, 0.9, 0.85, 1.0]; color=:cyan, marker=:c
 line!(follow, x, [0.1, 0.3, 0.6, 0.45, 0.65, 0.8, 0.75, 0.92]; color=:yellow, marker=:diamond)
 line!(breadth, x, [-0.4, -0.1, 0.2, 0.5, 0.1, 0.6, 0.3, 0.7]; color=:magenta)
 hline!(breadth, 0.0; color=:gray)
-bar!(turnover, x, [18, 15, 21, 19, 24, 22, 26, 23]; color=:green, width=0.82)
+bar!(turnover, x, [18, 15, 21, 19, 24, 22, 26, 23]; color=:green, width=0.8)
 stackedbar!(
     states,
     ["S1", "S2", "S3", "S4"],
@@ -535,10 +535,10 @@ stackedbar!(
     [20.0, 25.0, 30.0, 35.0];
     labels=["Trend", "Neutral", "Stress"],
     colors=[:cyan, :yellow, :red],
-    width=0.82,
+    width=0.8,
 )
 ylims!(states, 0, 100)
-bar!(footer, x, [6, 8, 5, 9, 7, 10, 8, 11]; color=:blue, width=0.82)
+bar!(footer, x, [6, 8, 5, 9, 7, 10, 8, 11]; color=:blue, width=0.8)
 
 display(fig)
 ```

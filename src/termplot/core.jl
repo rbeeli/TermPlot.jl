@@ -209,19 +209,21 @@ struct PreparedPanel
 end
 
 struct PlotCanvas
-    masks::Matrix{UInt8}
-    mask_colors::Matrix{Union{Nothing,Symbol}}
-    mask_color_layers::Matrix{Vector{Pair{Symbol,UInt8}}}
-    mask_orders::Matrix{Int}
-    fills::Matrix{UInt8}
-    fill_colors::Matrix{Union{Nothing,Symbol}}
-    fill_orders::Matrix{Int}
-    guides::Matrix{Char}
+    dot_visible::BitArray{3}
+    dot_colors::Array{Union{Nothing,Symbol},3}
+    dot_orders::Array{Int,3}
+    fill_visible::BitArray{3}
+    fill_colors::Array{Union{Nothing,Symbol},3}
+    fill_orders::Array{Int,3}
+    guide_horizontal::BitMatrix
+    guide_vertical::BitMatrix
     guide_colors::Matrix{Union{Nothing,Symbol}}
     guide_orders::Matrix{Int}
-    overlays::Matrix{String}
-    overlay_colors::Matrix{Union{Nothing,Symbol}}
-    overlay_orders::Matrix{Int}
+    text_heads::Matrix{String}
+    text_colors::Matrix{Union{Nothing,Symbol}}
+    text_orders::Matrix{Int}
+    text_widths::Matrix{Int}
+    text_continuations::BitMatrix
 end
 
 """

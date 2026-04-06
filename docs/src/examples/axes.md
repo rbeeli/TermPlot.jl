@@ -11,7 +11,7 @@ The charts below are generated during the docs build.
 ```@setup axes_numeric
 using TermPlot
 
-fig = Figure(title="Numeric Axes Example", width=88, height=18);
+fig = Figure(title="Numeric Axes Example", width=112, height=24);
 panel!(fig);
 
 line!(fig, 1:8, [0.2, 0.5, 0.9, 0.7, 1.1, 1.4, 1.3, 1.6]; color=:cyan);
@@ -20,7 +20,7 @@ line!(fig, 1:8, [0.2, 0.5, 0.9, 0.7, 1.1, 1.4, 1.3, 1.6]; color=:cyan);
 ```julia
 using TermPlot
 
-fig = Figure(title="Numeric Axes Example", width=88, height=18)
+fig = Figure(title="Numeric Axes Example", width=112, height=24)
 panel!(fig)
 
 line!(fig, 1:8, [0.2, 0.5, 0.9, 0.7, 1.1, 1.4, 1.3, 1.6]; color=:cyan)
@@ -43,7 +43,7 @@ nothing # hide
 ```@setup axes_labeled
 using TermPlot
 
-fig = Figure(title="Axis Labels Example", width=92, height=20);
+fig = Figure(title="Axis Labels Example", width=112, height=24);
 panel!(
     fig;
     title="Labeled Numeric Axes",
@@ -66,7 +66,7 @@ ylims!(fig, -0.4, 1.8);
 ```julia
 using TermPlot
 
-fig = Figure(title="Axis Labels Example", width=92, height=20)
+fig = Figure(title="Axis Labels Example", width=112, height=24)
 panel!(
     fig;
     title="Labeled Numeric Axes",
@@ -102,7 +102,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Date Axis Example", width=96, height=20);
+fig = Figure(title="Date Axis Example", width=112, height=24);
 panel!(
     fig;
     title="Date Formatting",
@@ -125,7 +125,7 @@ ylims!(fig, 98, 136);
 using Dates
 using TermPlot
 
-fig = Figure(title="Date Axis Example", width=96, height=20)
+fig = Figure(title="Date Axis Example", width=112, height=24)
 panel!(
     fig;
     title="Date Formatting",
@@ -160,7 +160,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="DateTime Axis Example", width=100, height=20);
+fig = Figure(title="DateTime Axis Example", width=112, height=24);
 panel!(
     fig;
     title="Intraday Signal",
@@ -184,7 +184,7 @@ ylims!(fig, 0.0, 0.7);
 using Dates
 using TermPlot
 
-fig = Figure(title="DateTime Axis Example", width=100, height=20)
+fig = Figure(title="DateTime Axis Example", width=112, height=24)
 panel!(
     fig;
     title="Intraday Signal",
@@ -221,7 +221,7 @@ using Dates
 using TimeZones
 using TermPlot
 
-fig = Figure(title="Zoned Time Axis Example", width=104, height=20);
+fig = Figure(title="Zoned Time Axis Example", width=112, height=24);
 panel!(
     fig;
     title="New York Session",
@@ -249,7 +249,7 @@ using Dates
 using TimeZones
 using TermPlot
 
-fig = Figure(title="Zoned Time Axis Example", width=104, height=20)
+fig = Figure(title="Zoned Time Axis Example", width=112, height=24)
 panel!(
     fig;
     title="New York Session",
@@ -294,7 +294,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Dual Axis Example", width=96, height=22);
+fig = Figure(title="Dual Axis Example", width=112, height=24);
 panel!(
     fig;
     title="Equity and Drawdown",
@@ -320,7 +320,7 @@ hline!(fig, 0; color=:gray, yside=:right);
 using Dates
 using TermPlot
 
-fig = Figure(title="Dual Axis Example", width=96, height=22)
+fig = Figure(title="Dual Axis Example", width=112, height=24)
 panel!(
     fig;
     title="Equity and Drawdown",
@@ -358,7 +358,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Log Scale Example", width=96, height=22);
+fig = Figure(title="Log Scale Example", width=112, height=24);
 panel!(
     fig;
     title="Log10 Y-Axis",
@@ -382,7 +382,7 @@ ylims!(fig, 90, 700);
 using Dates
 using TermPlot
 
-fig = Figure(title="Log Scale Example", width=96, height=22)
+fig = Figure(title="Log Scale Example", width=112, height=24)
 panel!(
     fig;
     title="Log10 Y-Axis",
@@ -421,7 +421,7 @@ that y-side.
 using Dates
 using TermPlot
 
-fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=108, height=24, linkx=true, linky=true);
+fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=112, height=24, linkx=true, linky=true);
 
 left = panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
 right = panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd");
@@ -437,7 +437,7 @@ line!(right, x2, [0.97, 1.00, 1.01, 1.04, 1.02, 1.05, 1.07, 1.10]; label="B", co
 using Dates
 using TermPlot
 
-fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=108, height=24, linkx=true, linky=true)
+fig = Figure(GridLayout(1, 2); title="Linked Axes Example", width=112, height=24, linkx=true, linky=true)
 
 left = panel!(fig, 1, 1; title="Strategy A", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")
 right = panel!(fig, 1, 2; title="Strategy B", xlabel="Date", ylabel="Normalized", x_date_format=dateformat"mm-dd")

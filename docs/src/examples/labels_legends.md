@@ -10,7 +10,7 @@ The charts below are generated during the docs build.
 using Dates
 using TermPlot
 
-fig = Figure(title="Header Layout Example", width=96, height=22);
+fig = Figure(title="Header Layout Example", width=112, height=24);
 panel!(
     fig;
     title="Legend And Labels",
@@ -36,7 +36,7 @@ ylims!(fig, -8, 0; yside=:right);
 using Dates
 using TermPlot
 
-fig = Figure(title="Header Layout Example", width=96, height=22)
+fig = Figure(title="Header Layout Example", width=112, height=24)
 panel!(
     fig;
     title="Legend And Labels",
@@ -74,7 +74,7 @@ nothing # hide
 using Dates
 using TermPlot
 
-fig = Figure(title="Label-Only Header", width=96, height=20, legend=false);
+fig = Figure(title="Label-Only Header", width=112, height=24, legend=false);
 panel!(
     fig;
     title="Legend Disabled",
@@ -97,7 +97,7 @@ ylims!(fig, 8, 16; yside=:right);
 using Dates
 using TermPlot
 
-fig = Figure(title="Label-Only Header", width=96, height=20, legend=false)
+fig = Figure(title="Label-Only Header", width=112, height=24, legend=false)
 panel!(
     fig;
     title="Legend Disabled",
@@ -134,7 +134,7 @@ both categorical x labels and point markers.
 ```@setup labels_legends_unicode
 using TermPlot
 
-fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=64, height=24, legend=false);
+fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=112, height=24, legend=false);
 
 top = panel!(fig, 1, 1; title="Wide Marker", xlabel="Bucket", ylabel="Signal");
 bottom = panel!(fig, 2, 1; title="Wide Labels", xlabel="Category", ylabel="Score");
@@ -155,7 +155,7 @@ ylims!(bottom, 0, 1);
 ```julia
 using TermPlot
 
-fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=64, height=24, legend=false)
+fig = Figure(GridLayout(2, 1); title="Wide Unicode Support", width=112, height=24, legend=false)
 
 top = panel!(fig, 1, 1; title="Wide Marker", xlabel="Bucket", ylabel="Signal")
 bottom = panel!(fig, 2, 1; title="Wide Labels", xlabel="Category", ylabel="Score")

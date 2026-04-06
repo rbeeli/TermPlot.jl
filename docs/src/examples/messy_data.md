@@ -8,7 +8,7 @@ frame.
 ```@setup messy_data
 using TermPlot
 
-fig = Figure(GridLayout(1, 2); title="Messy Data Handling", width=108, height=22)
+fig = Figure(GridLayout(1, 2); title="Messy Data Handling", width=112, height=24)
 
 skipped = panel!(fig, 1, 1; title="Skipped Samples", xlabel="Bucket", ylabel="Value")
 clipped = panel!(fig, 1, 2; title="Clipped To Limits", xlabel="Bucket", ylabel="Value")
@@ -47,7 +47,7 @@ ylims!(clipped, 0.5, 2.5)
 ```julia
 using TermPlot
 
-fig = Figure(GridLayout(1, 2); title="Messy Data Handling", width=108, height=22)
+fig = Figure(GridLayout(1, 2); title="Messy Data Handling", width=112, height=24)
 
 skipped = panel!(fig, 1, 1; title="Skipped Samples", xlabel="Bucket", ylabel="Value")
 clipped = panel!(fig, 1, 2; title="Clipped To Limits", xlabel="Bucket", ylabel="Value")

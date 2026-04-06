@@ -6,7 +6,7 @@ They work well for impulses, event magnitudes, and bucketed factor scores.
 ```@setup stem_plots
 using TermPlot
 
-fig = Figure(title="Stem Example", width=96, height=22);
+fig = Figure(title="Stem Example", width=112, height=24);
 panel!(fig; title="Event Magnitudes", xlabel="Bucket", ylabel="Signal");
 
 stem!(
@@ -24,7 +24,7 @@ hline!(fig, 0.0; color=:gray, label="Baseline");
 ```julia
 using TermPlot
 
-fig = Figure(title="Stem Example", width=96, height=22)
+fig = Figure(title="Stem Example", width=112, height=24)
 panel!(fig; title="Event Magnitudes", xlabel="Bucket", ylabel="Signal")
 
 stem!(
@@ -57,7 +57,7 @@ That is useful for spreads, centered oscillators, or targets relative to a thres
 ```@setup shifted_stems
 using TermPlot
 
-fig = Figure(title="Shifted Baseline", width=96, height=22);
+fig = Figure(title="Shifted Baseline", width=112, height=24);
 panel!(fig; title="Spread Around Carry Hurdle", xlabel="Tenor", ylabel="Spread");
 
 stem!(
@@ -77,7 +77,7 @@ ylims!(fig, 8.0, 26.0);
 ```julia
 using TermPlot
 
-fig = Figure(title="Shifted Baseline", width=96, height=22)
+fig = Figure(title="Shifted Baseline", width=112, height=24)
 panel!(fig; title="Spread Around Carry Hurdle", xlabel="Tenor", ylabel="Spread")
 
 stem!(

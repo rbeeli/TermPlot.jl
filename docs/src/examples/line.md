@@ -8,7 +8,7 @@ The chart below is generated during the docs build.
 using Dates
 using TermPlot
 
-fig = Figure(title="Basic Example", width=96, height=22);
+fig = Figure(title="Basic Example", width=112, height=24);
 panel!(
     fig,
     title="Portfolio",
@@ -43,7 +43,7 @@ hline!(fig, 1.0; color=:gray, label="Baseline");
 using Dates
 using TermPlot
 
-fig = Figure(title="Basic Example", width=96, height=22)
+fig = Figure(title="Basic Example", width=112, height=24)
 panel!(
     fig,
     title="Portfolio",
@@ -91,7 +91,7 @@ Named options such as `:diamond`, `:circle`, `:square`, and `:cross` are built i
 ```@setup line_markers
 using TermPlot
 
-fig = Figure(title="Line Markers", width=96, height=22);
+fig = Figure(title="Line Markers", width=112, height=24);
 panel!(
     fig,
     title="Markers On Line Series",
@@ -109,7 +109,7 @@ line!(fig, x, [0.62, 0.58, 0.67, 0.60, 0.73, 0.69]; label="custom", color=:yello
 ```julia
 using TermPlot
 
-fig = Figure(title="Line Markers", width=96, height=22)
+fig = Figure(title="Line Markers", width=112, height=24)
 panel!(
     fig,
     title="Markers On Line Series",
@@ -143,7 +143,7 @@ The filled markers show the exact underlying sample locations.
 ```@setup step_line_plots
 using TermPlot
 
-fig = Figure(GridLayout(3, 1); title="Step Modes", width=96, height=34, linkx=true, linky=true, legend=false);
+fig = Figure(GridLayout(3, 1); title="Step Modes", width=112, height=34, linkx=true, linky=true, legend=false);
 post = panel!(fig, 1, 1; title="Post", xlabel="Bucket", ylabel="Allocation");
 mid = panel!(fig, 2, 1; title="Mid", xlabel="Bucket", ylabel="Allocation");
 pre = panel!(fig, 3, 1; title="Pre", xlabel="Bucket", ylabel="Allocation");
@@ -159,7 +159,7 @@ line!(pre, x, values; color=:magenta, step=:pre, marker='●');
 ```julia
 using TermPlot
 
-fig = Figure(GridLayout(3, 1); title="Step Modes", width=96, height=34, linkx=true, linky=true, legend=false)
+fig = Figure(GridLayout(3, 1); title="Step Modes", width=112, height=34, linkx=true, linky=true, legend=false)
 post = panel!(fig, 1, 1; title="Post", xlabel="Bucket", ylabel="Allocation")
 mid = panel!(fig, 2, 1; title="Mid", xlabel="Bucket", ylabel="Allocation")
 pre = panel!(fig, 3, 1; title="Pre", xlabel="Bucket", ylabel="Allocation")

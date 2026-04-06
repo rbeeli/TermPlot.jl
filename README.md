@@ -41,7 +41,7 @@ Pkg.add(url="https://github.com/rbeeli/TermPlot.jl.git")
 using Dates
 using TermPlot
 
-fig = Figure(title="Quick Example", width=88, height=18)
+fig = Figure(title="Quick Example", width=112, height=24)
 panel!(fig, xlabel="Date", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")
 
 x = [Date(2024, 1, 1) + Day(i) for i in 0:9]

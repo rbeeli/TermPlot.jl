@@ -14,7 +14,7 @@ tracks the terminal output closely.
 using Dates
 using TermPlot
 
-fig = Figure(title="Plain Text Render", width=88, height=18)
+fig = Figure(title="Plain Text Render", width=112, height=24)
 panel!(
     fig;
     title="Strategy",

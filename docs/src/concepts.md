@@ -32,7 +32,7 @@ In normal use you create figures directly and obtain panels from `panel!`:
 ```julia
 using TermPlot
 
-fig = Figure(GridLayout(2, 2); width=96, height=24)
+fig = Figure(GridLayout(2, 2); width=112, height=24)
 
 top_left = panel!(fig, 1, 1; title="Top Left", xlabel="x", ylabel="y")
 bottom = panel!(fig, 2, 1:2; title="Bottom", xlabel="x", ylabel="spread")
@@ -46,7 +46,7 @@ Plotting calls that target the figure then append to that current panel.
 ```julia
 using TermPlot
 
-fig = Figure(GridLayout(1, 2); width=84, height=18)
+fig = Figure(GridLayout(1, 2); width=112, height=24)
 
 left = panel!(fig, 1, 1; title="Left", xlabel="x", ylabel="y")
 line!(fig, 1:4, [1.0, 2.0, 1.5, 3.0]; label="Goes left")

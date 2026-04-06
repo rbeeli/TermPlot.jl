@@ -7,7 +7,7 @@ The chart below is generated during the docs build.
 ```@setup scatter_plots
 using TermPlot
 
-fig = Figure(title="Scatter Example", width=96, height=22);
+fig = Figure(title="Scatter Example", width=112, height=24);
 panel!(fig; title="Parameter Sweep", xlabel="Configuration", ylabel="Risk-adjusted return");
 
 scatter!(
@@ -44,7 +44,7 @@ ylims!(fig, -0.1, 0.8);
 ```julia
 using TermPlot
 
-fig = Figure(title="Scatter Example", width=96, height=22)
+fig = Figure(title="Scatter Example", width=112, height=24)
 panel!(fig; title="Parameter Sweep", xlabel="Configuration", ylabel="Risk-adjusted return")
 
 scatter!(
@@ -114,7 +114,7 @@ slope, intercept = fit_line(x, y)
 x_fit = [minimum(x), maximum(x)]
 y_fit = [intercept + slope * xi for xi in x_fit]
 
-fit = Figure(title="Scatter With Fitted Line", width=96, height=48)
+fit = Figure(title="Scatter With Fitted Line", width=112, height=48)
 panel!(fit; title="Linear Regression", xlabel="Feature value", ylabel="Target")
 
 scatter!(fit, x, y; label="Observations", color=:yellow, marker="diamond")
@@ -141,7 +141,7 @@ slope, intercept = fit_line(x, y)
 x_fit = [minimum(x), maximum(x)]
 y_fit = [intercept + slope * xi for xi in x_fit]
 
-fit = Figure(title="Scatter With Fitted Line", width=96, height=48)
+fit = Figure(title="Scatter With Fitted Line", width=112, height=48)
 panel!(fit; title="Linear Regression", xlabel="Feature value", ylabel="Target")
 
 scatter!(fit, x, y; label="Observations", color=:yellow, marker="diamond")
