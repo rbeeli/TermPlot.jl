@@ -193,6 +193,32 @@ end
     @test zlabels == ["2024-01-01 12:00"]
 end
 
+@testitem "date axis ticks do not render outside axis limits" setup = [TermPlotSetup] begin
+    start_date = Date(2008, 8, 25)
+    end_date = Date(2024, 12, 31)
+    lo = Float64(Dates.datetime2epochms(DateTime(start_date)))
+    hi = Float64(Dates.datetime2epochms(DateTime(end_date)))
+    ticks = TermPlot._nice_ticks(lo, hi, 6)
+
+    @test all(lo <= tick <= hi for tick in ticks)
+
+    offsets = collect(0:200:Dates.value(end_date - start_date))
+    dates = [start_date + Day(offset) for offset in offsets]
+    last(dates) == end_date || push!(dates, end_date)
+
+    fig = Figure(; width=120, height=18)
+    panel!(fig; title="Long dates", xlabel="Date", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd")
+    line!(fig, dates, collect(1.0:length(dates)); label="Series", color=:cyan)
+    xlims!(fig, start_date, end_date)
+
+    text = render(fig)
+    labels = [Date(match.match, dateformat"yyyy-mm-dd") for match in eachmatch(r"\d{4}-\d{2}-\d{2}", text)]
+
+    @test !isempty(labels)
+    @test all(start_date <= label <= end_date for label in labels)
+    @test !occursin("2028-01-29", text)
+end
+
 @testitem "mixed Date and DateTime x values promote to datetime and render" setup = [TermPlotSetup] begin
     fig = Figure(; width=72, height=16)
     panel = panel!(fig; xlabel="Time", ylabel="Value", x_date_format=dateformat"yyyy-mm-dd HH:MM")
