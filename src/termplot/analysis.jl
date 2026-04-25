@@ -572,8 +572,10 @@ function _nice_ticks(lo::Float64, hi::Float64, approx::Int)::Vector{Float64}
     start = ceil(lo / step) * step
     ticks = Float64[]
     value = start
-    while value <= hi + step * 0.5
-        push!(ticks, round(value / step) * step)
+    tolerance = 16.0 * eps(max(abs(lo), abs(hi), 1.0))
+    while value <= hi + tolerance
+        tick = round(value / step) * step
+        lo - tolerance <= tick <= hi + tolerance && push!(ticks, clamp(tick, lo, hi))
         value += step
     end
     isempty(ticks) && push!(ticks, lo, hi)

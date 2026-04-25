@@ -1,6 +1,6 @@
 name = "TermPlot"
 uuid = "aefd3b81-55d9-4c03-8227-171346e57043"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Rino Beeli <40661605+rbeeli@users.noreply.github.com>"]
 
 [deps]
